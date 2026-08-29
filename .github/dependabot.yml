@@ -13,17 +13,28 @@ updates:
     commit-message:
       prefix: "deps"
       include: "scope"
+
     groups:
       production-dependencies:
         dependency-type: "production"
         update-types:
           - "minor"
           - "patch"
+
       development-dependencies:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+      - dependency-name: "eslint-plugin-react-refresh"
+        update-types:
+          - "version-update:semver-minor"
 
   - package-ecosystem: "github-actions"
     directory: "/"
