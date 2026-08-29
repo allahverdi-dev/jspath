@@ -1,0 +1,1036 @@
+import { INTERVIEW_KIND as K, INTERVIEW_LEVEL as L } from '../schema/types.js';
+
+/**
+ * Coding and algorithm questions — the "write it on the whiteboard" half of a
+ * JavaScript interview.
+ *
+ * Each one gives the signature or the call site, then a model solution with the
+ * reasoning: which edge cases must be handled, what the complexity is, and what
+ * a strong candidate volunteers without being asked. These are open-ended, so
+ * the key points and common mistakes are the rubric — mark yourself against
+ * them rather than against a score the app cannot honestly compute.
+ *
+ * The implementation problems favour things that actually appear in front-end
+ * work (debounce, retry, caching, an event emitter, concurrency limiting) over
+ * puzzles, and the algorithm problems are the standard set, answered with the
+ * complexity discussion an interviewer is really assessing.
+ */
+
+const CODING = 'Coding Problems';
+const ALGO = 'Algorithms';
+
+export const questions = [
+  {
+    id: 'iv-code-debounce',
+    question: 'Implement `debounce(fn, wait)` with a `cancel` method.',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['closures', 'functions', 'performance'],
+    relatedLessons: ['l-m32-02'],
+    relatedChallenges: ['ch-hof-debounce'],
+    code: [
+      'const onSearch = debounce((query) => search(query), 300);',
+      '',
+      'input.addEventListener("input", (e) => onSearch(e.target.value));',
+      '// ... on teardown',
+      'onSearch.cancel();',
+    ].join('\n'),
+    shortAnswer:
+      'Keep the pending timer id in a closure, clear it at the start of every call, and schedule a fresh one. Preserve `this` and the arguments with a regular `function` wrapper and `fn.apply(this, args)`, and expose `cancel` so a component can clean up on unmount.',
+    deepAnswer: [
+      'The model solution:\n\n```js\nfunction debounce(fn, wait) {\n  let timer;\n\n  function debounced(...args) {\n    clearTimeout(timer);\n    timer = setTimeout(() => {\n      timer = undefined;\n      fn.apply(this, args);\n    }, wait);\n  }\n\n  debounced.cancel = () => {\n    clearTimeout(timer);\n    timer = undefined;\n  };\n\n  return debounced;\n}\n```',
+      'The three details an interviewer checks: `clearTimeout` before scheduling (without it, nothing is debounced at all); a `function` rather than an arrow for `debounced`, so `this` still comes from the call site and debounced **methods** work; and `apply` rather than a bare `fn()`, so both the receiver and the arguments survive.',
+      '`clearTimeout(undefined)` is a specified no-op, so the first call needs no guard.',
+      'Extensions worth mentioning before being asked. A leading-edge option fires immediately and then suppresses for `wait`, which suits a submit button. A `maxWait` guarantees the function runs at least every N ms even under continuous input — otherwise a user who never stops typing never triggers a search.',
+      'Returning a value is the awkward part: the call that eventually runs is not the call that returned. Production versions either return the previous result or return a promise that resolves when the debounced invocation completes.',
+      'Be ready to contrast it with throttle: debounce runs once **after** activity stops; throttle runs at most once per interval **during** activity. Debouncing a scroll handler means nothing happens while the user is scrolling, which is usually not what was wanted.',
+    ],
+    keyPoints: [
+      '`clearTimeout` before scheduling the replacement',
+      'Regular `function` + `fn.apply(this, args)` to preserve receiver and arguments',
+      '`cancel` for teardown; `clearTimeout(undefined)` is safe',
+      'Leading edge and `maxWait` are the usual extensions',
+      'Debounce waits for a pause; throttle rate-limits during activity',
+    ],
+    commonMistakes: [
+      'Using an arrow for the returned wrapper, which breaks debounced methods.',
+      'Forgetting `clearTimeout`, which makes it a delay rather than a debounce.',
+    ],
+    followUps: ['How would you add a leading-edge option?', 'What should the debounced function return?'],
+  },
+
+  {
+    id: 'iv-code-throttle',
+    question: 'Implement `throttle(fn, interval)` that fires on the leading edge and once more at the end if calls continued.',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['closures', 'performance', 'functions'],
+    relatedLessons: ['l-m32-02'],
+    code: [
+      'const onScroll = throttle(() => updatePosition(), 100);',
+      '',
+      'window.addEventListener("scroll", onScroll, { passive: true });',
+    ].join('\n'),
+    shortAnswer:
+      'Record the timestamp of the last invocation. If `interval` has elapsed, call immediately; otherwise store the arguments and schedule a single trailing call for the remaining time. The trailing edge is what stops the final scroll position being dropped.',
+    deepAnswer: [
+      'The model solution:\n\n```js\nfunction throttle(fn, interval) {\n  let last = 0;\n  let timer;\n  let pendingArgs = null;\n  let pendingThis = null;\n\n  return function throttled(...args) {\n    const now = Date.now();\n    const remaining = interval - (now - last);\n\n    if (remaining <= 0) {\n      clearTimeout(timer);\n      timer = undefined;\n      last = now;\n      fn.apply(this, args);\n    } else {\n      pendingArgs = args;\n      pendingThis = this;\n      if (timer === undefined) {\n        timer = setTimeout(() => {\n          last = Date.now();\n          timer = undefined;\n          fn.apply(pendingThis, pendingArgs);\n          pendingArgs = pendingThis = null;\n        }, remaining);\n      }\n    }\n  };\n}\n```',
+      'Why the trailing call matters: with a leading-only throttle, the very last event in a burst is discarded. For a scroll handler that means the final resting position is never rendered, which shows up as the UI settling one frame short.',
+      'Note that only **one** trailing timer is ever scheduled — the `if (timer === undefined)` guard. Later calls inside the window just overwrite `pendingArgs`, so the trailing invocation uses the most recent arguments.',
+      '`last = 0` initially means the first call always fires immediately. Some implementations start with `last = Date.now()` to suppress the leading edge; make the choice explicit rather than accidental.',
+      'For anything that touches layout, `requestAnimationFrame` is usually the better throttle than a millisecond interval: it aligns the work with the browser\'s paint cycle instead of guessing at a rate, and it automatically pauses in background tabs.',
+      'The observer APIs replace throttled scroll handlers outright where they apply: `IntersectionObserver` for "is it visible", `ResizeObserver` for size changes. Reaching for those first is the answer that shows platform knowledge.',
+    ],
+    keyPoints: [
+      'Track the last invocation time; call immediately when the interval has elapsed',
+      'Schedule exactly one trailing call, using the most recent arguments',
+      'Without a trailing call the final event of a burst is lost',
+      '`requestAnimationFrame` is the better throttle for layout work',
+      '`IntersectionObserver`/`ResizeObserver` remove the need entirely in many cases',
+    ],
+    commonMistakes: [
+      'Scheduling a new trailing timer on every suppressed call.',
+      'Implementing leading-only and not noticing the last event is dropped.',
+    ],
+    followUps: ['When is `requestAnimationFrame` better than a time-based throttle?', 'How do you suppress the leading edge?'],
+  },
+
+  {
+    id: 'iv-code-deep-clone',
+    question: 'Write a deep clone. What does the built-in option not handle?',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['copying', 'objects', 'recursion'],
+    relatedLessons: ['l-m34-04'],
+    code: [
+      'const original = { a: 1, nested: { b: [1, 2] }, when: new Date() };',
+      'original.self = original; // a cycle',
+      '',
+      'const copy = deepClone(original);',
+    ].join('\n'),
+    shortAnswer:
+      'Reach for `structuredClone` first — it handles nested objects, arrays, `Map`, `Set`, `Date`, `RegExp`, typed arrays and cycles. Write one by hand only when you must clone functions, class instances with their prototype, or DOM nodes, which `structuredClone` throws on.',
+    deepAnswer: [
+      'The answer that earns credit starts with "do not write one": `structuredClone(value)` is built in, correct about cycles, and considerably faster than a hand-rolled recursion. Its limits are precise — it throws `DataCloneError` on functions, DOM nodes, and symbols, and it returns a plain object rather than an instance of your class, dropping the prototype.',
+      '`JSON.parse(JSON.stringify(x))` is the answer to avoid, and being able to say why matters: it drops `undefined`, functions and symbols; converts `Date` to a string; turns `Map`/`Set` into `{}`; throws on cycles; and mangles `NaN` and `Infinity` into `null`.',
+      'A hand-written version, when required:\n\n```js\nfunction deepClone(value, seen = new WeakMap()) {\n  if (value === null || typeof value !== "object") return value;\n  if (seen.has(value)) return seen.get(value);\n\n  if (value instanceof Date) return new Date(value.getTime());\n  if (value instanceof RegExp) return new RegExp(value.source, value.flags);\n\n  if (Array.isArray(value)) {\n    const out = [];\n    seen.set(value, out);\n    for (const item of value) out.push(deepClone(item, seen));\n    return out;\n  }\n\n  if (value instanceof Map) {\n    const out = new Map();\n    seen.set(value, out);\n    for (const [k, v] of value) out.set(deepClone(k, seen), deepClone(v, seen));\n    return out;\n  }\n\n  if (value instanceof Set) {\n    const out = new Set();\n    seen.set(value, out);\n    for (const v of value) out.add(deepClone(v, seen));\n    return out;\n  }\n\n  const out = Object.create(Object.getPrototypeOf(value));\n  seen.set(value, out);\n  for (const key of Reflect.ownKeys(value)) {\n    out[key] = deepClone(value[key], seen);\n  }\n  return out;\n}\n```',
+      'The three details that separate a real implementation from a sketch: the `WeakMap` registered **before** recursing, which is what makes cycles terminate and preserves shared references as shared; `Object.create(Object.getPrototypeOf(value))` to keep class instances instances; and `Reflect.ownKeys`, which includes symbol keys that `Object.keys` would silently drop.',
+      'What this still does not do: it ignores property descriptors, so getters are invoked and copied as plain values, and non-enumerable or non-writable flags are lost. `Object.getOwnPropertyDescriptors` plus `Object.defineProperty` fixes that at the cost of readability — say it, do not necessarily write it.',
+      'Deep recursion overflows on deeply nested data; an explicit stack avoids it. And the strategic point: most "I need a deep clone" situations are better solved by not sharing mutable state in the first place, or by copying only the path you are changing.',
+    ],
+    keyPoints: [
+      '`structuredClone` first; it handles cycles, `Map`/`Set`/`Date`, typed arrays',
+      'It throws on functions and DOM nodes, and drops the prototype',
+      'JSON round-tripping loses `undefined`, functions, `Date`, `Map`/`Set` and cycles',
+      'Register in the `WeakMap` before recursing to terminate cycles',
+      '`Reflect.ownKeys` for symbols; `getPrototypeOf` to keep class identity',
+      'Descriptors, getters and deep recursion are the remaining gaps',
+    ],
+    commonMistakes: [
+      'Offering JSON round-tripping without naming what it destroys.',
+      'Adding cycle tracking after the recursive call instead of before.',
+    ],
+    followUps: ['Why must the WeakMap entry be set before recursing?', 'When is a deep clone the wrong solution entirely?'],
+  },
+
+  {
+    id: 'iv-code-promise-all',
+    question: 'Implement `Promise.all` from scratch.',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['promises', 'async-foundations'],
+    relatedLessons: ['l-m24-04'],
+    code: [
+      'promiseAll([Promise.resolve(1), 2, delayed(3)])',
+      '  .then((values) => console.log(values)); // [1, 2, 3]',
+    ].join('\n'),
+    shortAnswer:
+      'Return a new promise, resolve each input with `Promise.resolve`, write results into a pre-sized array **at their original index**, count completions, and resolve when the count reaches the length. Reject on the first rejection, and handle the empty-array case, which must resolve immediately.',
+    deepAnswer: [
+      'The model solution:\n\n```js\nfunction promiseAll(items) {\n  return new Promise((resolve, reject) => {\n    const list = Array.from(items);\n    const results = new Array(list.length);\n    let remaining = list.length;\n\n    if (remaining === 0) {\n      resolve(results);\n      return;\n    }\n\n    list.forEach((item, index) => {\n      Promise.resolve(item).then(\n        (value) => {\n          results[index] = value;\n          remaining -= 1;\n          if (remaining === 0) resolve(results);\n        },\n        reject,\n      );\n    });\n  });\n}\n```',
+      'Writing to `results[index]` rather than pushing is the detail most candidates miss. Pushing produces completion order, not input order, and the whole contract of `Promise.all` is that the output array lines up with the input.',
+      'The counter must be a separate variable, not `results.length` — a pre-sized array already has the full length, and counting non-`undefined` entries would break for a promise that legitimately resolves to `undefined`.',
+      '`Promise.resolve(item)` normalises non-promise values and foreign thenables, which is why `2` works in the example. Assuming every input has a `.then` is a common bug.',
+      'The empty case must resolve synchronously-ish with `[]`; without the early return the counter never reaches zero and the promise hangs forever.',
+      'Rejection semantics: passing `reject` directly as the second handler is correct because a promise can only settle once — later rejections are simply ignored. Note that `all` does **not** cancel the other operations; they keep running and their results are discarded.',
+      'From here the interviewer usually asks for a variant. `allSettled` never rejects and always writes a `{status, value|reason}` descriptor, so the counter decrements in both handlers. `race` needs no counter at all — just `.then(resolve, reject)` on every input. `any` resolves on first fulfilment and collects errors for an `AggregateError`.',
+    ],
+    keyPoints: [
+      'Write results at the original index; never push',
+      'Use a separate counter, not `results.length`',
+      '`Promise.resolve` each input to accept non-promises and thenables',
+      'Empty input must resolve with `[]` immediately',
+      'First rejection wins; later settlements are ignored; nothing is cancelled',
+    ],
+    commonMistakes: [
+      'Pushing results and returning them in completion order.',
+      'Forgetting the empty-array case, so the promise never settles.',
+    ],
+    followUps: ['How would you change it into `allSettled`?', 'How would you add a concurrency limit?'],
+  },
+
+  {
+    id: 'iv-code-async-pool',
+    question: 'Run 500 requests with at most 5 in flight at once. Implement it.',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['async-await', 'promises', 'performance'],
+    relatedLessons: ['l-m25-03'],
+    code: [
+      'const results = await mapLimit(urls, 5, (url) => fetchJson(url));',
+      '// results[i] corresponds to urls[i]',
+    ].join('\n'),
+    shortAnswer:
+      'Start N workers that each pull the next index from a shared cursor until the list is exhausted, writing each result to its own slot. `Promise.all` over the workers waits for everything. This keeps exactly N requests in flight without waiting for whole batches.',
+    deepAnswer: [
+      'The model solution:\n\n```js\nasync function mapLimit(items, limit, worker) {\n  const results = new Array(items.length);\n  let cursor = 0;\n\n  async function run() {\n    while (true) {\n      const index = cursor++;\n      if (index >= items.length) return;\n      results[index] = await worker(items[index], index);\n    }\n  }\n\n  const size = Math.min(limit, items.length);\n  await Promise.all(Array.from({ length: size }, run));\n  return results;\n}\n```',
+      'The shared `cursor` works because JavaScript is single-threaded: `cursor++` cannot interleave, so no two workers ever claim the same index. Saying that out loud shows you understand why no lock is needed — this would require synchronisation in a threaded language.',
+      'Contrast with the naive alternative, chunking into groups of 5 and awaiting each group. Chunking idles: if four requests finish in 10ms and one takes 2s, four slots sit empty for the rest of the batch. The worker-pool version starts the next item the instant a slot frees.',
+      'Why not just `Promise.all(urls.map(fetchJson))`: 500 simultaneous requests exhaust the browser\'s per-host connection limit, get you rate-limited or blocked by the server, and can exhaust memory holding 500 responses. Bounded concurrency is the difference between a script that works and one that gets you an angry email.',
+      'Error handling is a design decision to state explicitly. As written, the first rejection propagates out of `Promise.all` and the remaining in-flight work continues unobserved. If partial success should be reported, wrap the `worker` call so it resolves to `{ok: false, error}` instead of throwing, and let the caller decide.',
+      'Two production additions: an `AbortController` so the whole batch can be cancelled, and a small delay or token bucket between starts if the API publishes a requests-per-second limit rather than a concurrency limit — those are different constraints and need different mechanisms.',
+    ],
+    keyPoints: [
+      'N workers pulling from a shared cursor; results written by index',
+      'Single-threaded execution makes `cursor++` safe without a lock',
+      'Chunked batches idle whenever one item is slow',
+      'Unbounded `Promise.all` hits connection limits and rate limits',
+      'Decide explicitly whether one failure aborts the batch',
+      'Concurrency limits and rate limits are different constraints',
+    ],
+    commonMistakes: [
+      'Implementing fixed batches and calling it a concurrency limit.',
+      'Collecting results in completion order rather than by index.',
+    ],
+    followUps: ['Why is no locking needed for the cursor?', 'How would you report partial failures?'],
+  },
+
+  {
+    id: 'iv-code-event-emitter',
+    question: 'Implement a typed-enough `EventEmitter` with `on`, `off`, `once` and `emit`.',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['design-patterns', 'data-structures', 'events'],
+    relatedLessons: ['l-m41-02'],
+    code: [
+      'const bus = new EventEmitter();',
+      '',
+      'const off = bus.on("save", (doc) => console.log(doc.id));',
+      'bus.once("ready", () => console.log("ready"));',
+      'bus.emit("save", { id: 1 });',
+      'off();',
+    ].join('\n'),
+    shortAnswer:
+      'A `Map` from event name to a `Set` of listeners. `on` adds and returns an unsubscribe function, `off` deletes, `once` wraps the listener so it removes itself first, and `emit` iterates a **copy** of the set so mutation during dispatch is safe.',
+    deepAnswer: [
+      'The model solution:\n\n```js\nclass EventEmitter {\n  #listeners = new Map();\n\n  on(event, listener) {\n    if (!this.#listeners.has(event)) this.#listeners.set(event, new Set());\n    this.#listeners.get(event).add(listener);\n    return () => this.off(event, listener);\n  }\n\n  off(event, listener) {\n    const set = this.#listeners.get(event);\n    if (!set) return;\n    set.delete(listener);\n    if (set.size === 0) this.#listeners.delete(event);\n  }\n\n  once(event, listener) {\n    const wrapper = (...args) => {\n      this.off(event, wrapper);\n      listener(...args);\n    };\n    return this.on(event, wrapper);\n  }\n\n  emit(event, ...args) {\n    const set = this.#listeners.get(event);\n    if (!set) return false;\n    for (const listener of [...set]) {\n      try {\n        listener(...args);\n      } catch (err) {\n        queueMicrotask(() => { throw err; });\n      }\n    }\n    return true;\n  }\n}\n```',
+      '**Copying the set before iterating** is the detail that matters most. A listener that calls `off` — which `once` does on every fire — mutates the collection mid-iteration. `[...set]` makes dispatch operate on a stable snapshot, matching how DOM event dispatch behaves.',
+      '`once` removes **before** invoking, not after. If the listener throws, or re-emits the same event, removing first guarantees it still fires exactly once.',
+      'Isolating listener errors is a real design decision. Without the `try`, one throwing listener prevents every later listener from running — a subscriber breaking unrelated subscribers. Rethrowing in a microtask keeps the error visible to global handlers without letting it break dispatch.',
+      'Returning an unsubscribe function from `on` is worth doing unprompted: it removes the need for the caller to keep both the event name and the exact function reference, which is the usual source of listeners that are never cleaned up.',
+      'A `Set` rather than an array gives O(1) removal and silently deduplicates the same listener registered twice — worth stating as a deliberate choice, since Node\'s `EventEmitter` allows duplicates and calls them twice.',
+      'The leak to mention: an emitter that outlives its subscribers keeps them alive through the listener references. Long-lived global buses need disciplined teardown, or listeners keyed by an `AbortSignal` the way `addEventListener` allows.',
+    ],
+    keyPoints: [
+      '`Map` of event name to `Set` of listeners',
+      'Iterate a copy in `emit` — listeners can unsubscribe during dispatch',
+      '`once` removes before invoking, so a throw cannot make it fire twice',
+      'Isolate listener errors so one subscriber cannot break the others',
+      'Return an unsubscribe function from `on`',
+      'A long-lived emitter retains its listeners — a leak without teardown',
+    ],
+    commonMistakes: [
+      'Iterating the live set, so `once` listeners skip their neighbours.',
+      'Letting a throwing listener abort the remaining dispatch.',
+    ],
+    followUps: ['Why copy the set before iterating?', 'Should `emit` be synchronous or asynchronous?'],
+  },
+
+  {
+    id: 'iv-code-deep-equal',
+    question: 'Implement `deepEqual(a, b)`. What are the edge cases?',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['objects', 'recursion', 'testing'],
+    relatedLessons: ['l-m14-05'],
+    code: [
+      'deepEqual({ a: [1, { b: 2 }] }, { a: [1, { b: 2 }] }); // true',
+      'deepEqual(NaN, NaN); // true',
+      'deepEqual({ a: undefined }, {}); // false',
+    ].join('\n'),
+    shortAnswer:
+      'Recurse structurally: handle primitives with `Object.is` so `NaN` matches itself, compare constructors, compare key sets including symbols, and recurse into values. The edge cases are `NaN`, `-0`, `Date`/`RegExp`/`Map`/`Set`, cycles, and the difference between a missing key and one set to `undefined`.',
+    deepAnswer: [
+      'A solid implementation:\n\n```js\nfunction deepEqual(a, b, seen = new Map()) {\n  if (Object.is(a, b)) return true;\n  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;\n  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;\n\n  if (seen.get(a) === b) return true;\n  seen.set(a, b);\n\n  if (a instanceof Date) return a.getTime() === b.getTime();\n  if (a instanceof RegExp) return a.source === b.source && a.flags === b.flags;\n\n  if (a instanceof Map) {\n    if (a.size !== b.size) return false;\n    for (const [k, v] of a) {\n      if (!b.has(k) || !deepEqual(v, b.get(k), seen)) return false;\n    }\n    return true;\n  }\n\n  if (a instanceof Set) {\n    if (a.size !== b.size) return false;\n    for (const v of a) if (!b.has(v)) return false;\n    return true;\n  }\n\n  const aKeys = Reflect.ownKeys(a);\n  const bKeys = Reflect.ownKeys(b);\n  if (aKeys.length !== bKeys.length) return false;\n  return aKeys.every((key) => Object.hasOwn(b, key) && deepEqual(a[key], b[key], seen));\n}\n```',
+      '`Object.is` rather than `===` for the primitive fast path handles `NaN === NaN` correctly. It also distinguishes `0` from `-0`, which is arguably the right call for an equality function but should be a conscious decision — many libraries deliberately treat them as equal.',
+      'The `undefined` case is genuinely ambiguous and worth raising: `{ a: undefined }` and `{}` have different key sets but every property read gives the same answer. The implementation above says they differ. `JSON.stringify` comparison would say they match. Neither is wrong — the point is to state which semantics you chose.',
+      'The prototype check prevents `{}` from equalling `Object.create(null)` or a class instance with the same fields. Without it, `deepEqual(new Point(1,2), {x:1,y:2})` returns `true`, which is usually not wanted.',
+      'Cycle handling with a `Map` of already-compared pairs is what stops a self-referencing object from overflowing the stack. Registering before recursing is essential, exactly as in deep clone.',
+      '`Set` comparison as written is only correct for primitive members — matching sets of objects structurally is a bipartite matching problem, and it is fair to say so and scope it out rather than pretend otherwise.',
+      'In practice you would use a library or your test framework\'s built-in matcher. The value of the exercise is knowing what those matchers had to decide, so that when `toEqual` and `toStrictEqual` disagree you know exactly which of these cases explains it.',
+    ],
+    keyPoints: [
+      '`Object.is` fast path handles `NaN`; note it separates `0` and `-0`',
+      'Compare prototypes so class instances do not equal plain objects',
+      'Handle `Date`, `RegExp`, `Map`, `Set` explicitly',
+      'Track visited pairs before recursing to survive cycles',
+      '`Reflect.ownKeys` includes symbols; decide how `{a: undefined}` compares',
+      'Structural `Set`-of-objects comparison is a matching problem — scope it out',
+    ],
+    commonMistakes: [
+      'Using `===` and reporting `NaN` as unequal to itself.',
+      'Comparing via `JSON.stringify`, which depends on key order.',
+    ],
+    followUps: ['How do `toEqual` and `toStrictEqual` differ?', 'Why check prototypes?'],
+  },
+
+  {
+    id: 'iv-code-lru-cache',
+    question: 'Implement an LRU cache with O(1) `get` and `set`.',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['data-structures', 'performance', 'algorithms'],
+    relatedLessons: ['l-m34-01'],
+    code: [
+      'const cache = new LRUCache(2);',
+      'cache.set("a", 1);',
+      'cache.set("b", 2);',
+      'cache.get("a");      // 1 — "a" is now most recent',
+      "cache.set('c', 3);   // evicts \"b\"",
+    ].join('\n'),
+    shortAnswer:
+      'In JavaScript, exploit the fact that `Map` preserves insertion order: on a hit, delete and re-insert the key to move it to the end; when over capacity, evict `map.keys().next().value`, the oldest entry. Both operations are O(1).',
+    deepAnswer: [
+      'The idiomatic JavaScript solution:\n\n```js\nclass LRUCache {\n  #map = new Map();\n\n  constructor(capacity) {\n    if (!Number.isInteger(capacity) || capacity < 1) {\n      throw new RangeError("capacity must be a positive integer");\n    }\n    this.capacity = capacity;\n  }\n\n  get(key) {\n    if (!this.#map.has(key)) return undefined;\n    const value = this.#map.get(key);\n    this.#map.delete(key);\n    this.#map.set(key, value); // re-insert as most recent\n    return value;\n  }\n\n  set(key, value) {\n    if (this.#map.has(key)) this.#map.delete(key);\n    this.#map.set(key, value);\n    if (this.#map.size > this.capacity) {\n      this.#map.delete(this.#map.keys().next().value);\n    }\n  }\n}\n```',
+      'The insight is that `Map` gives you the ordering half of the classic solution for free. The textbook answer is a hash map plus a doubly linked list — the map for O(1) lookup, the list for O(1) reordering and eviction. `Map` already maintains insertion order with O(1) delete and insert, so it **is** that structure.',
+      'Be ready to write the linked-list version anyway, because some interviewers want it. Each node holds `key`, `value`, `prev`, `next`; `get` unlinks and moves to head; `set` evicts from tail. Sentinel head and tail nodes remove the null checks and are what makes the pointer code readable.',
+      '`delete` then `set` is what refreshes recency — a plain `set` on an existing key updates the value **without** changing its position, which would silently break LRU ordering. This is the single most common bug in the `Map`-based version.',
+      'Evicting via `map.keys().next().value` retrieves the first (oldest) key without materialising an array. `[...map.keys()][0]` would be O(n) and quietly turn the whole cache into a linear-time structure.',
+      'Design points worth volunteering: `get` returning `undefined` is ambiguous if `undefined` is a valid cached value — expose `has`, or return a `{hit, value}` pair. And a real cache usually wants a TTL alongside the size bound, since "recently used" and "still fresh" are different questions.',
+    ],
+    keyPoints: [
+      '`Map` preserves insertion order — it is the ordered structure the problem needs',
+      'On a hit, `delete` then `set` to refresh recency',
+      'Evict with `map.keys().next().value`, not by spreading to an array',
+      'The classic answer is hash map + doubly linked list with sentinels',
+      'Guard the capacity; consider `has`/TTL for a real cache',
+    ],
+    commonMistakes: [
+      'Calling `set` on an existing key without deleting first, so order never updates.',
+      'Using `[...map.keys()][0]`, which makes eviction O(n).',
+    ],
+    followUps: ['Write the doubly-linked-list version.', 'How would you add a TTL?'],
+  },
+
+  {
+    id: 'iv-code-curry',
+    question: 'Implement `curry(fn)` so `curry(add3)(1)(2)(3)` and `curry(add3)(1, 2)(3)` both work.',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['functional', 'closures', 'functions'],
+    relatedLessons: ['l-m37-03'],
+    code: [
+      'const add3 = (a, b, c) => a + b + c;',
+      'const curried = curry(add3);',
+      '',
+      'curried(1)(2)(3);   // 6',
+      'curried(1, 2)(3);   // 6',
+      'curried(1)(2, 3);   // 6',
+    ].join('\n'),
+    shortAnswer:
+      'Compare the arguments collected so far against `fn.length`. If there are enough, call the function; otherwise return a new function that accumulates more. `fn.length` is the arity source, and knowing its limitations is the substance of the answer.',
+    deepAnswer: [
+      'The model solution:\n\n```js\nfunction curry(fn) {\n  return function curried(...args) {\n    if (args.length >= fn.length) {\n      return fn.apply(this, args);\n    }\n    return (...rest) => curried.apply(this, [...args, ...rest]);\n  };\n}\n```\n\nThe recursion through `curried` is what allows any grouping of arguments: each partial application collects what it was given and returns a collector for the remainder.',
+      '`fn.length` is the count of parameters **before** the first default or rest parameter. So `(a, b = 1, c) => ...` has a `length` of `1`, and `(...args) => ...` has `0` — which means currying such a function calls it immediately with whatever it got. Naming this limitation is what separates a memorised answer from an understood one.',
+      'The fix when arity cannot be inferred is to pass it explicitly: `curry(fn, arity)`. Libraries like Ramda do exactly this, plus a placeholder value so arguments can be supplied out of order.',
+      '`this` is preserved by using a regular `function` for `curried` and `apply`ing it, which lets curried methods work.',
+      'Where currying genuinely pays off is specialisation and composition: `const setHeader = curry(fetchWith)(headers)` produces a reusable function, and unary functions compose cleanly in a pipeline. It is also why functional libraries put the data argument **last** — so everything before it can be partially applied.',
+      'Where it does not pay off, and worth saying: in ordinary application code an arrow closure (`(c) => add3(1, 2, c)`) is clearer than a curried chain, and it costs nothing. Currying earns its place in a codebase already committed to point-free composition, not as a decoration.',
+      'The cost is real too — every partial application allocates a closure, and stack traces through curried chains are noticeably harder to read.',
+    ],
+    keyPoints: [
+      'Collect arguments until `args.length >= fn.length`, then call',
+      'Recurse through the named `curried` so any grouping works',
+      '`fn.length` stops at the first default or rest parameter',
+      'Pass an explicit arity when it cannot be inferred',
+      'Currying suits point-free composition; an arrow is clearer otherwise',
+    ],
+    commonMistakes: [
+      'Assuming `fn.length` always reflects the real parameter count.',
+      'Presenting currying as universally preferable to a closure.',
+    ],
+    followUps: ['What is `fn.length` for `(a, b = 1, c) => {}`?', 'Why do functional libraries put data last?'],
+  },
+
+  {
+    id: 'iv-code-compose-pipe',
+    question: 'Implement `pipe` and `compose`, including for asynchronous steps.',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['functional', 'array-methods'],
+    relatedLessons: ['l-m37-02'],
+    code: [
+      'const slugify = pipe(trim, lowercase, replaceSpaces);',
+      'slugify("  Hello World  "); // "hello-world"',
+    ].join('\n'),
+    shortAnswer:
+      '`pipe` applies left to right, `compose` right to left; both are a `reduce` over the function list. The asynchronous version chains with `await` inside a `reduce` over promises, so each step receives the resolved value of the previous one.',
+    deepAnswer: [
+      'The synchronous pair:\n\n```js\nconst pipe = (...fns) => (input) => fns.reduce((acc, fn) => fn(acc), input);\nconst compose = (...fns) => (input) => fns.reduceRight((acc, fn) => fn(acc), input);\n```\n\nThey are the same fold in opposite directions. `pipe(a, b, c)(x)` is `c(b(a(x)))`; `compose(a, b, c)(x)` is `a(b(c(x)))`.',
+      'Which to prefer is a readability argument: `pipe` matches reading order and the shell-pipeline mental model, so most modern codebases use it. `compose` matches mathematical notation, which is why it dominates older functional libraries.',
+      'The asynchronous version:\n\n```js\nconst pipeAsync = (...fns) => (input) =>\n  fns.reduce((promise, fn) => promise.then(fn), Promise.resolve(input));\n```\n\nUsing `.then(fn)` rather than `fn(await ...)` means each step may return either a plain value or a promise and both work, because `then` unwraps thenables automatically.',
+      'Multiple arguments only work for the first function; every later step receives exactly one value. Support it explicitly if needed:\n\n```js\nconst pipe = (first, ...rest) => (...args) =>\n  rest.reduce((acc, fn) => fn(acc), first(...args));\n```',
+      'The empty case should be the identity function — `pipe()(x)` returning `x` falls out of `reduce` with an initial value automatically, which is a small sign the implementation is principled rather than special-cased.',
+      'The honest tradeoff to raise: composition hides the intermediate values, which makes debugging harder — you cannot set a breakpoint "between" steps without inserting a tap function. A `tap = (label) => (x) => { console.log(label, x); return x; }` inserted into the pipeline is the standard remedy, and stack traces still show a wall of anonymous frames unless the functions are named.',
+    ],
+    keyPoints: [
+      '`pipe` is `reduce`; `compose` is `reduceRight`',
+      '`pipe` reads in execution order and is usually clearer',
+      'Async version folds with `.then`, so steps may be sync or async',
+      'Only the first function can take multiple arguments',
+      'Composition hides intermediates — use a `tap` and name your functions',
+    ],
+    commonMistakes: [
+      'Mixing up the direction of `compose` and `pipe`.',
+      'Awaiting inside the reducer in a way that only works for promise-returning steps.',
+    ],
+    followUps: ['How would you debug a value halfway through a pipeline?', 'Why do async steps work with `.then` but not with plain application?'],
+  },
+
+  {
+    id: 'iv-code-promisify',
+    question: 'Convert a Node-style callback API into a promise-returning one.',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['promises', 'async-foundations'],
+    relatedLessons: ['l-m24-01'],
+    code: [
+      'function readConfig(path, callback) {',
+      '  // callback(error, data)',
+      '}',
+      '',
+      'const readConfigAsync = promisify(readConfig);',
+      'const data = await readConfigAsync("/etc/app.json");',
+    ].join('\n'),
+    shortAnswer:
+      'Return a function that builds a promise, appends a callback which rejects on a truthy error and resolves otherwise, and forwards the original arguments. Preserve `this` so promisified methods still work.',
+    deepAnswer: [
+      'The model solution:\n\n```js\nfunction promisify(fn) {\n  return function promisified(...args) {\n    return new Promise((resolve, reject) => {\n      fn.call(this, ...args, (error, result) => {\n        if (error) reject(error);\n        else resolve(result);\n      });\n    });\n  };\n}\n```',
+      '`fn.call(this, ...)` rather than `fn(...)` matters whenever the API is a method that depends on its receiver — `db.query`, `emitter.once`. Losing `this` here is the most common bug.',
+      'The error convention is "truthy error means failure". Testing `if (error)` rather than `if (error !== null)` matters because some callbacks pass `undefined` on success. But it also means a legitimate falsy value in the error slot — `0`, `""` — is read as success. That is inherent to the convention, not a flaw in the wrapper, and worth naming: Node\'s own `util.promisify` makes the same choice.',
+      'Callbacks that yield multiple success values (`callback(null, a, b)`) cannot map onto a single resolution. `util.promisify` supports a `custom` symbol for that case; a hand-rolled version should collect them into an array or an object deliberately.',
+      'A promise settles once, so a badly-behaved API that invokes its callback twice is harmless here — the second call is ignored. This is genuinely safer than the raw callback version and is a good point to volunteer.',
+      'The `new Promise` constructor is correct here because you are adapting a non-promise API — that is precisely what it is for. Wrapping something that **already** returns a promise in `new Promise` is the "explicit promise construction antipattern", and interviewers do ask about the difference.',
+      'Cancellation does not come for free: if the underlying API supports aborting, the wrapper must thread a signal through, because a pending promise cannot be cancelled from outside.',
+    ],
+    keyPoints: [
+      'Append a callback that rejects on truthy error, resolves otherwise',
+      '`fn.call(this, ...)` so promisified methods keep their receiver',
+      'Multiple success values do not map to a single resolution',
+      'A promise settles once, so a double callback is harmless',
+      '`new Promise` is right for adapting callback APIs, wrong for wrapping promises',
+    ],
+    commonMistakes: [
+      'Dropping `this` and breaking method APIs.',
+      'Wrapping an already-promise-returning function in `new Promise`.',
+    ],
+    followUps: ['What is the explicit promise construction antipattern?', 'How would you handle `callback(null, a, b)`?'],
+  },
+
+  {
+    id: 'iv-code-safe-render',
+    question: 'Render a list of user-submitted comments to the DOM. Write it safely.',
+    topic: CODING,
+    level: L.INTERMEDIATE,
+    kind: K.CODING,
+    topicIds: ['dom-manipulation', 'security'],
+    relatedLessons: ['l-m44-01', 'l-m18-03'],
+    code: [
+      'const comments = [',
+      '  { author: "Ada", body: "Nice work" },',
+      '  { author: "Grace", body: "<img src=x onerror=alert(1)>" },',
+      '];',
+      '',
+      'renderComments(list, comments);',
+    ].join('\n'),
+    shortAnswer:
+      'Build nodes with `createElement` and assign text through `textContent`, never by interpolating into `innerHTML`. `textContent` assigns a string as text — the browser never parses it as markup — so the second comment renders as visible characters rather than executing.',
+    deepAnswer: [
+      'The safe implementation:\n\n```js\nfunction renderComments(container, comments) {\n  const fragment = document.createDocumentFragment();\n\n  for (const comment of comments) {\n    const li = document.createElement("li");\n\n    const author = document.createElement("strong");\n    author.textContent = comment.author;\n\n    const body = document.createElement("p");\n    body.textContent = comment.body;\n\n    li.append(author, body);\n    fragment.append(li);\n  }\n\n  container.replaceChildren(fragment);\n}\n```',
+      'The rule is about **where** data lands, not about filtering it. Text assigned via `textContent` is inert by construction; the browser has no parsing step in which a tag could be recognised. That is why this needs no escaping logic of its own — and why hand-written escape functions, which people get wrong, are unnecessary here.',
+      'A `DocumentFragment` batches the insertion so layout is recalculated once instead of per comment, and `replaceChildren` clears and fills in a single call — cleaner and faster than `innerHTML = ""` followed by appends.',
+      'The cases where escaping is genuinely different and harder: an attribute value (`href`, `src`, `style`) has its own contexts, and `href="javascript:..."` executes even with the text properly escaped — so URLs need a scheme allowlist, not escaping. Anything inside a `<script>` or `<style>` block has yet another set of rules. This is why "escape the input" is the wrong mental model and "use an API that cannot interpret data as code" is the right one.',
+      'If rich text really is a product requirement, do not write the sanitiser. Use a maintained, well-reviewed library (DOMPurify is the standard choice), run it on the output, and keep a restrictive allowlist of tags and attributes. Sanitisers are hard because browser parsers are forgiving in surprising ways.',
+      'Defence in depth, since client-side rendering is only one layer: a Content Security Policy without `unsafe-inline` blocks injected inline handlers even if something slips through, the server should validate and store safely, and cookies should be `HttpOnly` so a successful XSS still cannot read the session token.',
+      'Worth stating plainly: `innerHTML` is not banned — it is fine for markup you authored yourself. It becomes a vulnerability at the exact moment any part of the string comes from outside your code, including from your own database, since that data originally came from a user.',
+    ],
+    keyPoints: [
+      '`textContent` assigns text that is never parsed as markup',
+      'Build with `createElement`; batch with a fragment; swap with `replaceChildren`',
+      'Attributes and URLs need allowlists, not escaping — `javascript:` still runs',
+      'For rich text, use a maintained sanitiser; do not write one',
+      'CSP, server-side validation and `HttpOnly` cookies are the other layers',
+      '`innerHTML` is safe only for strings you authored entirely',
+    ],
+    commonMistakes: [
+      'Writing a custom escape function instead of using `textContent`.',
+      'Treating stored data as trusted because it came from your own database.',
+    ],
+    followUps: ['Why is escaping insufficient for an `href`?', 'What does CSP add if the rendering is already safe?'],
+  },
+
+  {
+    id: 'iv-code-observable-store',
+    question: 'Implement a small observable store with `getState`, `setState` and `subscribe`.',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['design-patterns', 'closures', 'clean-code'],
+    relatedLessons: ['l-m41-02'],
+    code: [
+      'const store = createStore({ count: 0 });',
+      '',
+      'const unsubscribe = store.subscribe((state) => render(state));',
+      'store.setState({ count: 1 });',
+      'unsubscribe();',
+    ].join('\n'),
+    shortAnswer:
+      'Hold the state and a `Set` of subscribers in a closure. `setState` merges into a **new** state object and notifies a copy of the subscriber set. `subscribe` returns an unsubscribe function. The design decisions worth defending are immutability, notification timing, and error isolation.',
+    deepAnswer: [
+      'The implementation:\n\n```js\nfunction createStore(initialState) {\n  let state = { ...initialState };\n  const subscribers = new Set();\n\n  function getState() {\n    return state;\n  }\n\n  function setState(partial) {\n    const next = typeof partial === "function" ? partial(state) : partial;\n    const merged = { ...state, ...next };\n    if (Object.keys(next).every((key) => Object.is(state[key], merged[key]))) return;\n    state = merged;\n    for (const subscriber of [...subscribers]) {\n      try {\n        subscriber(state);\n      } catch (err) {\n        queueMicrotask(() => { throw err; });\n      }\n    }\n  }\n\n  function subscribe(subscriber) {\n    subscribers.add(subscriber);\n    return () => subscribers.delete(subscriber);\n  }\n\n  return { getState, setState, subscribe };\n}\n```',
+      '**Replacing rather than mutating** the state object is what makes `Object.is(prev, next)` a valid change check for consumers. If `setState` mutated in place, every subscriber would have to deep-compare to know what changed, which is the whole reason immutable state became the norm.',
+      '**Accepting an updater function** (`setState((s) => ({ count: s.count + 1 }))`) removes a race: computing the next value from a possibly-stale `getState()` read is the same stale-closure bug that appears in React.',
+      '**Bailing out when nothing changed** stops a no-op write from re-rendering everything. Note the comparison is shallow and only over the keys being set — deep equality here would be a performance trap of its own.',
+      '**Iterating a copy** matters because a subscriber may unsubscribe itself during notification, mutating the set mid-iteration.',
+      '**Isolating subscriber errors** keeps one broken consumer from preventing the others from updating.',
+      'Design questions an interviewer will push on. Should notification be synchronous or batched? Synchronous is simpler to reason about but means N `setState` calls cause N renders; batching in a microtask coalesces them at the cost of `getState` and the DOM being briefly out of step. Should `getState` return a frozen object? Freezing in development catches accidental mutation cheaply and is worth the cost there.',
+      'And the honest framing: this is roughly Redux minus reducers and middleware, or a Svelte store. Knowing that a store is a closure plus a subscriber set — not a framework feature — is the point of the exercise.',
+    ],
+    keyPoints: [
+      'Replace state rather than mutating it, so identity signals change',
+      'Accept an updater function to avoid stale reads',
+      'Bail out when nothing changed; keep the comparison shallow',
+      'Notify over a copy of the subscriber set',
+      'Isolate subscriber errors',
+      'Decide deliberately between synchronous and batched notification',
+    ],
+    commonMistakes: [
+      'Mutating the existing state object and breaking identity comparison.',
+      'Notifying over the live set while subscribers unsubscribe.',
+    ],
+    followUps: ['What would batching notifications cost?', 'How would you add selector-based subscriptions?'],
+  },
+
+  {
+    id: 'iv-code-bind-polyfill',
+    question: 'Write your own `Function.prototype.bind`. What makes it harder than it looks?',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['this', 'functions', 'prototypes'],
+    relatedLessons: ['l-m29-03'],
+    code: [
+      'function greet(greeting, name) {',
+      '  return `${greeting}, ${name} — I am ${this.role}`;',
+      '}',
+      '',
+      'const bound = myBind(greet, { role: "admin" }, "Hello");',
+      'bound("Ada"); // "Hello, Ada — I am admin"',
+    ].join('\n'),
+    shortAnswer:
+      'The easy part is capturing the receiver and pre-filling arguments with a closure. The hard part is that a bound function must still work with `new` — in which case the bound `this` is ignored and the new instance is used instead, with the original\'s prototype.',
+    deepAnswer: [
+      'The naive version handles the common case:\n\n```js\nfunction myBind(fn, thisArg, ...bound) {\n  return function (...args) {\n    return fn.apply(thisArg, [...bound, ...args]);\n  };\n}\n```\n\nThat covers partial application and fixing a receiver, which is what 95% of `bind` usage needs.',
+      'What it gets wrong is construction. The specification says a bound function used with `new` must ignore the bound `this` entirely and construct an instance of the **target**. The naive version would pass the freshly-created object as an ordinary argument and return the wrong thing.',
+      'A version that handles it:\n\n```js\nfunction myBind(fn, thisArg, ...bound) {\n  if (typeof fn !== "function") {\n    throw new TypeError("Bind must be called on a function");\n  }\n\n  function bnd(...args) {\n    const allArgs = [...bound, ...args];\n    // `new bnd()` sets `this` to an object inheriting from bnd.prototype\n    if (new.target !== undefined) {\n      return Reflect.construct(fn, allArgs, new.target);\n    }\n    return fn.apply(thisArg, allArgs);\n  }\n\n  bnd.prototype = Object.create(fn.prototype ?? Object.prototype);\n  return bnd;\n}\n```\n\n`new.target` is the clean way to detect construction — it is `undefined` for an ordinary call and the constructor for a `new` call. The older idiom, `this instanceof bnd`, works but is fooled by `fn.call(Object.create(bnd.prototype))`.',
+      'Setting `bnd.prototype` from `fn.prototype` is what makes `instanceof` behave: an instance created through the bound function should still satisfy `instance instanceof fn`.',
+      'Details of the real `bind` worth knowing even if you do not implement them. The bound function\'s `length` is the target\'s `length` minus the number of pre-bound arguments, floored at zero. Its `name` is `"bound "` plus the target\'s name — visible in stack traces, which is genuinely useful when debugging. And binding a bound function again cannot change the receiver: the first `bind` wins, permanently.',
+      'Two things `bind` cannot do. It has no effect on an arrow function, because an arrow\'s `this` is lexical and there is no binding to override — a function that "ignores `bind`" is almost always an arrow. And it returns a **new** function object every call, so `el.removeEventListener("click", this.handler.bind(this))` never removes anything; the reference must be stored once.',
+      'When to prefer what: an arrow wrapper is clearer for a one-off callback, a class field arrow is right for handlers passed around a lot, and `bind` is the tool when you need partial application or must produce a stable reference for later removal.',
+    ],
+    keyPoints: [
+      'Closure captures the receiver and pre-bound arguments; `apply` forwards the rest',
+      'A bound function used with `new` must ignore the bound `this`',
+      '`new.target` detects construction; `Reflect.construct` forwards it correctly',
+      'Chain `prototype` so `instanceof` still works',
+      'Real `bind` adjusts `length` and `name`; rebinding cannot change the receiver',
+      '`bind` cannot affect an arrow, and returns a new function each call',
+    ],
+    commonMistakes: [
+      'Ignoring the `new` case entirely.',
+      'Calling `.bind(this)` inline in `removeEventListener` and expecting it to match.',
+    ],
+    followUps: ['Why can rebinding not change the receiver?', 'Why does `bind` have no effect on an arrow function?'],
+  },
+
+  {
+    id: 'iv-code-request-dedupe',
+    question: 'Ten components request the same user at once. Make it one network call.',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['promises', 'performance', 'http'],
+    relatedLessons: ['l-m25-03'],
+    code: [
+      'const getUser = dedupe((id) => fetchJson(`/api/users/${id}`));',
+      '',
+      'await Promise.all([getUser(1), getUser(1), getUser(2)]);',
+      '// two network requests, not three',
+    ].join('\n'),
+    shortAnswer:
+      'Cache the **in-flight promise** by key, not the resolved value. Concurrent callers with the same key get the same promise; delete the entry when it settles so a later call refetches.',
+    deepAnswer: [
+      'The implementation:\n\n```js\nfunction dedupe(fn, keyFor = (...args) => String(args[0])) {\n  const inFlight = new Map();\n\n  return function deduped(...args) {\n    const key = keyFor(...args);\n    const existing = inFlight.get(key);\n    if (existing) return existing;\n\n    const promise = Promise.resolve()\n      .then(() => fn.apply(this, args))\n      .finally(() => inFlight.delete(key));\n\n    inFlight.set(key, promise);\n    return promise;\n  };\n}\n```',
+      'The key insight is that a promise is a **value you can hand to many consumers**. Every caller gets the same object, each attaches its own `.then`, and all of them are notified from a single underlying request. This is the cheapest possible fix for duplicate requests and needs no shared cache layer.',
+      '`.finally` deleting the entry is what makes it a request deduplicator rather than a cache. Keeping the entry would make it a permanent cache with no invalidation, which is a different feature with different failure modes.',
+      'Deleting on rejection too is deliberate: a failed request should not poison the key so that everything afterwards fails. Retrying is then the caller\'s decision.',
+      'Wrapping the call in `Promise.resolve().then(...)` means a synchronous throw inside `fn` becomes a rejection rather than propagating out of `deduped` — so callers only ever have to handle one failure mode.',
+      'The key function is the part to get right. Deduplicating by URL alone is wrong if the request also varies by headers, body or method; `POST` bodies in particular must be part of the key or two different writes get collapsed into one. In fact, deduplicating non-idempotent requests at all is usually the wrong call — restrict this to `GET`.',
+      'The natural extension is a full cache: keep resolved values with a TTL, serve them immediately, revalidate in the background. That is what SWR and React Query implement — deduplication is just their first layer, and knowing it is the first layer is the useful part of the answer.',
+    ],
+    keyPoints: [
+      'Cache the in-flight promise, not the resolved value',
+      'One promise can have many consumers — that is the whole mechanism',
+      'Delete on settle (including rejection) or it becomes an uninvalidated cache',
+      'Normalise a key that covers everything the request depends on',
+      'Restrict deduplication to idempotent requests',
+      'A TTL cache with revalidation is the next layer up',
+    ],
+    commonMistakes: [
+      'Caching the resolved value and accidentally building a cache with no invalidation.',
+      'Keying only on the URL when the body or headers also vary.',
+    ],
+    followUps: ['Why delete the entry on rejection?', 'What would you add to turn this into a real cache?'],
+  },
+
+  {
+    id: 'iv-code-async-iterator-pages',
+    question: 'Expose a paginated API as an async iterable so callers can `for await` over every item.',
+    topic: CODING,
+    level: L.ADVANCED,
+    kind: K.CODING,
+    topicIds: ['iterators', 'async-await', 'http'],
+    relatedLessons: ['l-m35-02'],
+    code: [
+      'for await (const item of paginate("/api/items")) {',
+      '  process(item);',
+      '  if (shouldStop(item)) break;',
+      '}',
+    ].join('\n'),
+    shortAnswer:
+      'Write an async generator that fetches a page, yields its items one at a time, and follows the cursor until there is none. Consumers get a flat stream, pages are fetched lazily, and `break` stops fetching — because the loop calls the generator\'s `return()`.',
+    deepAnswer: [
+      'The implementation:\n\n```js\nasync function* paginate(url, { signal } = {}) {\n  let next = url;\n  while (next) {\n    const res = await fetch(next, { signal });\n    if (!res.ok) throw new HttpError(res.status, `Failed: ${res.status}`);\n    const page = await res.json();\n    yield* page.items;\n    next = page.nextUrl ?? null;\n  }\n}\n```\n\n`yield*` delegates to the array\'s iterator, yielding each item individually — so the consumer sees a flat stream and never has to know pages exist.',
+      'Laziness is the point. Nothing is fetched until the first `next()`, and page N+1 is only requested once the consumer has consumed page N. Compare with the eager version that loops fetching every page into one array: that one cannot start work until the last page arrives, and holds the entire result set in memory.',
+      '`break` works correctly and for a specific reason: an early exit from `for await` calls the iterator\'s `return()`, which resumes the generator as if a `return` appeared at the `yield` and unwinds it. So no further page is requested. If the generator had a `try`/`finally`, the cleanup would run there — which is where you would release a connection or close a file handle.',
+      'Threading an `AbortController` signal through matters because the consumer may stop mid-page. Without it, the current `fetch` keeps running after `break`.',
+      'Error propagation is natural: a throw inside the generator surfaces at the `for await` site, so a normal `try`/`catch` around the loop works. That is a real advantage over a callback-per-page design, where errors have nowhere obvious to go.',
+      'The tradeoff to name: this is strictly sequential. If the API exposes page numbers rather than opaque cursors, fetching several pages concurrently is much faster and this shape gives it up. A cursor-based API leaves no choice — you cannot know page N+1\'s cursor until page N arrives — which is worth pointing out as a property of the API design rather than of the code.',
+      'Async generators are also the natural consumer for streaming responses: `for await (const chunk of res.body)` iterates a `ReadableStream` directly.',
+    ],
+    keyPoints: [
+      'An async generator gives a flat, lazy stream over pages',
+      '`yield*` delegates to each page\'s items',
+      '`break` calls `return()`, unwinding the generator and stopping fetches',
+      'Thread an abort signal so the in-flight page is cancelled too',
+      'Errors surface at the `for await` site and are catchable normally',
+      'Cursor pagination forces sequential fetching; page numbers would allow concurrency',
+    ],
+    commonMistakes: [
+      'Fetching every page eagerly into an array and calling it streaming.',
+      'Assuming `break` leaves a request running — it does not, if the signal is threaded.',
+    ],
+    followUps: ['What runs if the consumer throws inside the loop?', 'When would you fetch pages concurrently instead?'],
+  },
+
+  {
+    id: 'iv-algo-two-sum',
+    question: 'Given an array and a target, return the indices of two numbers that add to the target.',
+    topic: ALGO,
+    level: L.JUNIOR_PLUS,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'data-structures'],
+    relatedLessons: ['l-m39-01'],
+    code: [
+      'twoSum([2, 7, 11, 15], 9); // [0, 1]',
+      'twoSum([3, 3], 6);         // [0, 1]',
+      'twoSum([1, 2], 10);        // null',
+    ].join('\n'),
+    shortAnswer:
+      'One pass with a `Map` from value to index. For each number, check whether `target - number` has already been seen; if so you have the answer. O(n) time, O(n) space — versus the O(n²) nested loop.',
+    deepAnswer: [
+      'The solution:\n\n```js\nfunction twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (seen.has(complement)) return [seen.get(complement), i];\n    seen.set(nums[i], i);\n  }\n  return null;\n}\n```',
+      'Checking **before** inserting is what prevents an element pairing with itself. With `[3, 3]` and target `6`: at `i = 0`, `3` is not yet in the map, so store `3 → 0`; at `i = 1`, complement `3` is found at index 0, giving `[0, 1]`. Inserting first would have returned `[0, 0]`.',
+      'The brute-force nested loop is O(n²) and worth stating as the baseline before improving on it — an interviewer usually wants to see you name the naive solution, its complexity, and then the trade you are making.',
+      'The trade is explicit: O(n) extra space buys the drop from O(n²) to O(n) time. That is the classic hash-map-for-speed exchange and the sentence to say out loud.',
+      'The sorted variant is a different answer: if the array is sorted, two pointers from each end give O(n) time with O(1) space. But sorting an unsorted array first costs O(n log n) and destroys the original indices, so for **this** problem the map wins. Knowing when each applies is the actual skill.',
+      'Clarifying questions a good candidate asks first: can the same element be used twice (no); is exactly one solution guaranteed, or should ties be handled; are the numbers integers, and could they overflow (not in JavaScript below 2^53); should indices or values be returned. Interviewers frequently score this as highly as the code.',
+      'Edge cases: fewer than two elements, no valid pair (return `null` or throw — decide and be consistent), and negative numbers, which work unchanged because subtraction handles them.',
+    ],
+    keyPoints: [
+      'One pass, `Map` from value to index — O(n) time, O(n) space',
+      'Check for the complement before inserting, so an element cannot pair with itself',
+      'Name the O(n²) baseline and the space-for-time trade explicitly',
+      'Two pointers is O(1) space but requires a sorted array and loses indices',
+      'Clarify duplicates, guaranteed solutions, and the return shape first',
+    ],
+    commonMistakes: [
+      'Inserting before checking, returning the same index twice.',
+      'Sorting first and losing the original indices.',
+    ],
+    followUps: ['How does the sorted version differ?', 'What if you needed all pairs, not just one?'],
+  },
+
+  {
+    id: 'iv-algo-longest-unique-substring',
+    question: 'Find the length of the longest substring without repeating characters.',
+    topic: ALGO,
+    level: L.INTERMEDIATE,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'strings'],
+    relatedLessons: ['l-m39-03'],
+    code: [
+      'lengthOfLongestSubstring("abcabcbb"); // 3 ("abc")',
+      'lengthOfLongestSubstring("bbbbb");    // 1 ("b")',
+      'lengthOfLongestSubstring("pwwkew");   // 3 ("wke")',
+    ].join('\n'),
+    shortAnswer:
+      'A sliding window with a `Map` from character to its last index. Move the right edge forward; when a repeat is found inside the window, jump the left edge past the previous occurrence. O(n) time, O(k) space for the alphabet size.',
+    deepAnswer: [
+      'The solution:\n\n```js\nfunction lengthOfLongestSubstring(s) {\n  const lastIndex = new Map();\n  let best = 0;\n  let start = 0;\n\n  for (let end = 0; end < s.length; end++) {\n    const char = s[end];\n    const seenAt = lastIndex.get(char);\n    if (seenAt !== undefined && seenAt >= start) {\n      start = seenAt + 1;\n    }\n    lastIndex.set(char, end);\n    best = Math.max(best, end - start + 1);\n  }\n\n  return best;\n}\n```',
+      'The `seenAt >= start` guard is the detail that makes it correct. Without it, a character last seen **before** the current window would drag `start` backwards, growing the window to include duplicates. Test with `"abba"`: at the final `a`, its last index is `0`, which is behind `start = 2`, so the window must not move back.',
+      'Each index is visited once by `end` and `start` only ever moves forward, so the total work is linear — O(n) — even though it looks like a nested traversal. Being able to argue that amortised bound is what the question is testing.',
+      'The alternative "shrink one at a time" formulation, removing characters from a `Set` until the duplicate is gone, is also O(n) amortised and arguably easier to reason about. Either is fine; the jump version does fewer operations.',
+      'Space is O(min(n, alphabet size)) — bounded by the character set, not by the string length, which is worth stating precisely rather than saying "O(n)".',
+      'The JavaScript-specific caveat: indexing a string gives UTF-16 code units, so an emoji is two "characters" and a surrogate pair could be split. For text that may contain astral characters, iterate `[...s]` — which yields code points — and be aware that even that does not handle combining marks, where `Intl.Segmenter` is the correct tool. Raising this shows you think about real input rather than ASCII test cases.',
+      'Edge cases: empty string returns `0`, a single character returns `1`, and an all-unique string returns its own length.',
+    ],
+    keyPoints: [
+      'Sliding window with last-seen indices; O(n) time',
+      'Only advance `start` when the duplicate is inside the current window',
+      'Space is O(min(n, alphabet)), not O(n)',
+      '`start` never moves backwards — that is what keeps it linear',
+      'String indexing is UTF-16; `[...s]` iterates code points',
+    ],
+    commonMistakes: [
+      'Moving `start` backwards for a duplicate outside the window.',
+      'Claiming O(n²) because there appear to be two moving pointers.',
+    ],
+    followUps: ['Why is this linear despite two pointers?', 'How would you handle emoji correctly?'],
+  },
+
+  {
+    id: 'iv-algo-group-anagrams',
+    question: 'Group a list of words into anagram groups.',
+    topic: ALGO,
+    level: L.JUNIOR_PLUS,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'strings', 'data-structures'],
+    relatedLessons: ['l-m39-03'],
+    code: [
+      'groupAnagrams(["eat", "tea", "tan", "ate", "nat", "bat"]);',
+      '// [["eat","tea","ate"], ["tan","nat"], ["bat"]]',
+    ].join('\n'),
+    shortAnswer:
+      'Map each word to a canonical key that all its anagrams share — its sorted letters — and group by that key. O(n · k log k) for n words of length k; a character-count key brings it to O(n · k).',
+    deepAnswer: [
+      'The sorted-key solution:\n\n```js\nfunction groupAnagrams(words) {\n  const groups = new Map();\n  for (const word of words) {\n    const key = [...word].sort().join("");\n    const bucket = groups.get(key);\n    if (bucket === undefined) groups.set(key, [word]);\n    else bucket.push(word);\n  }\n  return [...groups.values()];\n}\n```',
+      'The whole problem is choosing a **canonical form**: a representation that is identical for every member of a group and different for every non-member. Sorted letters satisfy both. Recognising the problem as "canonical key plus group" rather than "compare every pair" is the insight — pairwise comparison would be O(n²·k).',
+      'Complexity is O(n · k log k), dominated by sorting each word. The faster key is a 26-slot character count rendered as a string, giving O(n · k):\n\n```js\nfunction keyOf(word) {\n  const counts = new Array(26).fill(0);\n  for (const ch of word) counts[ch.charCodeAt(0) - 97] += 1;\n  return counts.join(",");\n}\n```\n\nThe separator is not optional — without it, counts of `1,11` and `11,1` produce the same string.',
+      'That version assumes lowercase ASCII. Say the assumption out loud, and note the general fallback: a `Map` of character to count, serialised with sorted keys, works for any alphabet at the cost of the constant factor.',
+      'For realistic input, decide whether the comparison is case-insensitive and whether Unicode should be normalised — `NFC` normalisation matters if accented characters can arrive either precomposed or as combining sequences.',
+      'Returning `[...groups.values()]` preserves first-appearance order of the groups, which is usually what a caller expects even when the problem does not require it.',
+    ],
+    keyPoints: [
+      'Group by a canonical key rather than comparing pairs',
+      'Sorted letters: O(n · k log k); character counts: O(n · k)',
+      'A count key needs a separator or counts collide',
+      'State the alphabet assumption; case and Unicode normalisation are real concerns',
+      'Pairwise comparison would be O(n²·k)',
+    ],
+    commonMistakes: [
+      'Comparing every pair of words instead of building a key.',
+      'Joining counts without a separator.',
+    ],
+    followUps: ['When is the counting key actually faster?', 'How would you handle Unicode input?'],
+  },
+
+  {
+    id: 'iv-algo-binary-search-first',
+    question: 'Write a binary search that returns the index of the **first** occurrence of a value.',
+    topic: ALGO,
+    level: L.INTERMEDIATE,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'recursion'],
+    relatedLessons: ['l-m39-03'],
+    code: [
+      'firstIndexOf([1, 2, 2, 2, 3], 2); // 1',
+      'firstIndexOf([1, 2, 3], 4);       // -1',
+    ].join('\n'),
+    shortAnswer:
+      'A standard binary search, but on a match do not return — record the index and keep searching the left half. Compute the midpoint as `low + ((high - low) >> 1)` and use `low <= high` consistently so the loop always terminates.',
+    deepAnswer: [
+      'The solution:\n\n```js\nfunction firstIndexOf(sorted, target) {\n  let low = 0;\n  let high = sorted.length - 1;\n  let found = -1;\n\n  while (low <= high) {\n    const mid = low + ((high - low) >> 1);\n    if (sorted[mid] === target) {\n      found = mid;\n      high = mid - 1; // keep looking left\n    } else if (sorted[mid] < target) {\n      low = mid + 1;\n    } else {\n      high = mid - 1;\n    }\n  }\n\n  return found;\n}\n```',
+      'The only change from a plain binary search is `high = mid - 1` after a match instead of returning immediately. That continues narrowing towards the leftmost equal element while `found` holds the best answer so far. Mirroring it — `low = mid + 1` on a match — gives the last occurrence.',
+      'The three ways binary search goes wrong, all worth naming: an off-by-one in the loop condition (`low < high` skips the final element when the target is there); failing to move `low` or `high` past `mid`, which loops forever; and overflow in `(low + high) / 2`. The overflow is a genuine hazard in fixed-width languages; in JavaScript, numbers are doubles so it only matters above 2^53 — but `low + ((high - low) >> 1)` is the habit, and note `>>` itself coerces to 32 bits, so an array longer than 2^31 would break it. Saying that precisely, rather than parroting the C advice, is the strong answer.',
+      'Complexity is O(log n) time, O(1) space. The recursive formulation is O(log n) stack space and offers nothing extra here.',
+      'Preconditions matter: the array must be sorted by the same ordering the comparison uses. A binary search over an array sorted with a custom comparator must use that comparator, not `<`.',
+      'The natural extension is `lowerBound`/`upperBound` — the first index at which the target could be inserted while keeping the array sorted. Those are strictly more useful than a plain search, since together they give the full range of equal elements in O(log n) and therefore the count as well.',
+    ],
+    keyPoints: [
+      'On a match, record the index and continue left rather than returning',
+      'Mirror it (`low = mid + 1`) for the last occurrence',
+      '`low + ((high - low) >> 1)` for the midpoint; `>>` is a 32-bit operation',
+      'Always move `low` or `high` past `mid` or the loop never terminates',
+      'O(log n) time, O(1) space; the array must be sorted by the same ordering',
+      '`lowerBound`/`upperBound` give the whole equal range',
+    ],
+    commonMistakes: [
+      'Returning on the first match and getting an arbitrary occurrence.',
+      'Using `low < high`, which misses the final element.',
+    ],
+    followUps: ['How do you find the last occurrence?', 'How would you count occurrences in O(log n)?'],
+  },
+
+  {
+    id: 'iv-algo-merge-intervals',
+    question: 'Merge a list of overlapping intervals.',
+    topic: ALGO,
+    level: L.INTERMEDIATE,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'arrays'],
+    relatedLessons: ['l-m39-03'],
+    code: [
+      'mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]]);',
+      '// [[1, 6], [8, 10], [15, 18]]',
+    ].join('\n'),
+    shortAnswer:
+      'Sort by start, then sweep once: if the current interval starts at or before the end of the last merged one, extend that end to the maximum of the two; otherwise start a new interval. O(n log n), dominated by the sort.',
+    deepAnswer: [
+      'The solution:\n\n```js\nfunction mergeIntervals(intervals) {\n  if (intervals.length === 0) return [];\n\n  const sorted = [...intervals].sort((a, b) => a[0] - b[0]);\n  const merged = [[...sorted[0]]];\n\n  for (let i = 1; i < sorted.length; i++) {\n    const [start, end] = sorted[i];\n    const last = merged[merged.length - 1];\n\n    if (start <= last[1]) {\n      last[1] = Math.max(last[1], end);\n    } else {\n      merged.push([start, end]);\n    }\n  }\n\n  return merged;\n}\n```',
+      'Sorting by start is what makes a single pass sufficient: once ordered, any interval that overlaps the running one must overlap at its start, so only the most recent merged interval ever needs checking.',
+      '`Math.max(last[1], end)` rather than `end` handles a fully-contained interval such as `[1, 10]` followed by `[2, 3]`. Assigning `end` directly would shrink the merged interval — a bug that passes many test cases and fails on containment.',
+      '`[...intervals].sort(...)` copies first, because `sort` mutates. Returning a result that has silently reordered the caller\'s array is a side effect nobody asked for. The `[...sorted[0]]` copy likewise avoids mutating the caller\'s inner arrays when `last[1]` is written.',
+      'The clarifying question to ask: are touching intervals — `[1, 2]` and `[2, 3]` — merged? `start <= last[1]` says yes. For half-open intervals, or for calendar bookings where an event ending at 10:00 does not conflict with one starting at 10:00, it should be `<`. This genuinely changes the answer, so ask before coding.',
+      'Complexity: O(n log n) for the sort, O(n) for the sweep, O(n) space for the output. If the input is already sorted, the whole thing is O(n).',
+      'The family of related problems all use the same sweep: inserting one interval into a sorted list, finding the intersection of two lists, and "minimum meeting rooms", which sorts start and end times separately and tracks a running count.',
+    ],
+    keyPoints: [
+      'Sort by start, then one linear sweep',
+      '`Math.max` when extending, or contained intervals shrink the result',
+      'Copy before sorting — `sort` mutates the caller\'s array',
+      'Ask whether touching intervals count as overlapping',
+      'O(n log n) time, O(n) space; O(n) if already sorted',
+    ],
+    commonMistakes: [
+      'Assigning `end` instead of taking the maximum.',
+      'Sorting the caller\'s array in place.',
+    ],
+    followUps: ['How would you find the minimum number of meeting rooms?', 'What changes for half-open intervals?'],
+  },
+
+  {
+    id: 'iv-algo-balanced-brackets',
+    question: 'Determine whether a string of brackets is balanced.',
+    topic: ALGO,
+    level: L.JUNIOR_PLUS,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'data-structures'],
+    relatedLessons: ['l-m39-02'],
+    code: [
+      'isBalanced("{[()]}");  // true',
+      'isBalanced("{[(])}");  // false',
+      'isBalanced("(");       // false',
+    ].join('\n'),
+    shortAnswer:
+      'Push opening brackets onto a stack; on a closing bracket, pop and check it matches. Balanced means every pop matches and the stack is empty at the end. O(n) time, O(n) space.',
+    deepAnswer: [
+      'The solution:\n\n```js\nconst PAIRS = new Map([[")", "("], ["]", "["], ["}", "{"]]);\nconst OPENERS = new Set(PAIRS.values());\n\nfunction isBalanced(input) {\n  const stack = [];\n  for (const char of input) {\n    if (OPENERS.has(char)) {\n      stack.push(char);\n    } else if (PAIRS.has(char)) {\n      if (stack.pop() !== PAIRS.get(char)) return false;\n    }\n  }\n  return stack.length === 0;\n}\n```',
+      'The final `stack.length === 0` check is the half people forget. Without it, `"((("` returns `true` — every closing bracket that appeared matched, there just were not any.',
+      '`stack.pop()` on an empty array returns `undefined`, which cannot equal any opener, so an unmatched closing bracket is rejected without a separate emptiness check. That is a small elegance worth pointing out rather than adding a redundant guard.',
+      'A stack is the right structure because nesting is inherently last-in-first-out: the most recently opened bracket must be the next one closed. Counting occurrences instead of stacking fails on `"([)]"` — equal counts, wrong order — and that counter-example is the standard way to demonstrate you understand **why** a stack is required.',
+      'Non-bracket characters are ignored here, which is the usual requirement for validating code or expressions. Whether they should be is a clarifying question.',
+      'Complexity: O(n) time; O(n) space in the worst case of all opening brackets. There is no way to do better than O(n) time — every character must be examined at least once.',
+      'The realistic extension is what makes this more than a toy: real parsing has to handle brackets inside string literals and comments, which must be skipped. That turns the problem into a small tokeniser, and mentioning it shows awareness of why editors get this subtly wrong.',
+    ],
+    keyPoints: [
+      'A stack, because nesting is last-in-first-out',
+      'Check the stack is empty at the end, not just that pops matched',
+      '`pop()` on an empty array gives `undefined`, which safely fails the match',
+      'Counting brackets fails on `"([)]"` — order matters',
+      'O(n) time and space; real parsing must skip strings and comments',
+    ],
+    commonMistakes: [
+      'Omitting the final emptiness check.',
+      'Counting openers and closers instead of tracking order.',
+    ],
+    followUps: ['Why is counting insufficient?', 'How would you handle brackets inside string literals?'],
+  },
+
+  {
+    id: 'iv-algo-top-k-frequent',
+    question: 'Return the k most frequent elements in an array.',
+    topic: ALGO,
+    level: L.INTERMEDIATE,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'data-structures'],
+    relatedLessons: ['l-m39-03'],
+    code: [
+      'topK([1, 1, 1, 2, 2, 3], 2); // [1, 2]',
+      'topK(["a", "b", "a"], 1);    // ["a"]',
+    ].join('\n'),
+    shortAnswer:
+      'Count with a `Map`, then select the top k. Sorting all counts is O(m log m) and perfectly acceptable; bucket sort by frequency gives O(n) because frequencies are bounded by the array length, which is the answer an interviewer is usually fishing for.',
+    deepAnswer: [
+      'The straightforward version:\n\n```js\nfunction topK(items, k) {\n  const counts = new Map();\n  for (const item of items) counts.set(item, (counts.get(item) ?? 0) + 1);\n\n  return [...counts.entries()]\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, k)\n    .map(([value]) => value);\n}\n```\n\nO(n + m log m) where m is the number of distinct values. For most real inputs this is the right code to write — it is short, obviously correct, and fast enough.',
+      'The linear version exploits a bound: a frequency can never exceed `items.length`, so counts can be bucketed by frequency into an array and read from the top down.\n\n```js\nfunction topK(items, k) {\n  const counts = new Map();\n  for (const item of items) counts.set(item, (counts.get(item) ?? 0) + 1);\n\n  const buckets = Array.from({ length: items.length + 1 }, () => []);\n  for (const [value, count] of counts) buckets[count].push(value);\n\n  const out = [];\n  for (let freq = buckets.length - 1; freq >= 1 && out.length < k; freq--) {\n    for (const value of buckets[freq]) {\n      out.push(value);\n      if (out.length === k) break;\n    }\n  }\n  return out;\n}\n```\n\nO(n) time and O(n) space. Recognising that a bounded value range turns a sort into a bucket distribution is the transferable idea — the same trick underlies counting sort and radix sort.',
+      'The third approach, a min-heap of size k, gives O(m log k). It wins specifically when k is much smaller than m, and it is the only one of the three that works on a stream where you cannot hold all the data. JavaScript has no built-in heap, so you would be writing one — say that, and say it is not worth it unless the constraints demand it.',
+      'The judgment being tested is choosing among these, not memorising the fastest. Naming the sort version, then offering the bucket version with its reasoning, is a complete answer.',
+      'Clarifying questions: how are ties broken (arbitrarily, or by first appearance); is k guaranteed to be at most the number of distinct values; are the elements primitives, since object elements would need a key function because `Map` compares them by reference.',
+    ],
+    keyPoints: [
+      'Count with a `Map`, then select — the counting step is O(n) regardless',
+      'Sorting counts is O(m log m) and usually the right code to write',
+      'Frequencies are bounded by n, so bucket sort gives O(n)',
+      'A size-k min-heap is O(m log k) and the only streaming-capable option',
+      'Clarify tie-breaking and whether elements are primitives',
+    ],
+    commonMistakes: [
+      'Sorting the original array rather than the counts.',
+      'Presenting the heap as always optimal without noting JavaScript has no built-in one.',
+    ],
+    followUps: ['When does the heap approach actually win?', 'How would you handle a stream you cannot buffer?'],
+  },
+
+  {
+    id: 'iv-algo-fibonacci-approaches',
+    question: 'Compute the nth Fibonacci number. Compare the approaches.',
+    topic: ALGO,
+    level: L.JUNIOR_PLUS,
+    kind: K.ALGORITHMS,
+    topicIds: ['recursion', 'algorithms', 'performance'],
+    relatedLessons: ['l-m38-03'],
+    code: [
+      'fib(10); // 55',
+      'fib(90); // exceeds Number.MAX_SAFE_INTEGER',
+    ].join('\n'),
+    shortAnswer:
+      'Naive recursion is O(2^n) and unusable past about n = 40. Memoization makes it O(n) time and O(n) space. Iteration with two rolling variables is O(n) time and O(1) space, and is the answer to give. Above n = 78 the result exceeds `Number.MAX_SAFE_INTEGER`, so `BigInt` is required.',
+    deepAnswer: [
+      'The iterative solution, which is what you should write:\n\n```js\nfunction fib(n) {\n  if (!Number.isInteger(n) || n < 0) throw new RangeError("n must be a non-negative integer");\n  let prev = 0;\n  let curr = 1;\n  if (n === 0) return 0;\n  for (let i = 2; i <= n; i++) {\n    [prev, curr] = [curr, prev + curr];\n  }\n  return curr;\n}\n```\n\nO(n) time, O(1) space, no stack depth concern at any n.',
+      'The naive recursion is exponential because it recomputes the same subproblems: `fib(5)` calls `fib(3)` twice, `fib(2)` three times, and the call tree has roughly 2^n nodes. Being able to explain **why** it is exponential — overlapping subproblems, not "recursion is slow" — is the point of asking.',
+      'Memoization fixes exactly that: each `fib(k)` is computed once and reused, collapsing the tree to a chain. O(n) time and O(n) space, plus O(n) stack depth — which still overflows around n = 10,000.',
+      'This is the classic illustration of dynamic programming. Memoization is top-down DP; the iterative loop is bottom-up DP with the table reduced to two variables, since only the last two values are ever needed. That "keep only what you need" reduction is the transferable technique.',
+      'The precision limit is the detail most candidates miss and interviewers like: `fib(79)` is 14,472,334,024,676,221, which is already above `Number.MAX_SAFE_INTEGER` (2^53 − 1). The result stays a **finite number** but is silently wrong. `BigInt` — `let prev = 0n; let curr = 1n;` — gives exact results at any size, at the cost of slower arithmetic and no mixing with regular numbers.',
+      'For completeness: there is an O(log n) matrix-exponentiation solution, and Binet\'s closed-form formula — which is O(1) but loses accuracy above about n = 70 due to floating-point error, so it is not actually a correct answer for large n.',
+      'Validate the input. `fib(-1)` and `fib(2.5)` should be rejected rather than silently looping or returning nonsense.',
+    ],
+    keyPoints: [
+      'Naive recursion is O(2^n) from overlapping subproblems, not from recursion itself',
+      'Memoization: O(n) time and space, top-down DP',
+      'Iteration with two variables: O(n) time, O(1) space — the answer to give',
+      'Above n = 78 the result silently exceeds `Number.MAX_SAFE_INTEGER`; use `BigInt`',
+      'Matrix exponentiation is O(log n); Binet\'s formula is inaccurate for large n',
+      'Validate that n is a non-negative integer',
+    ],
+    commonMistakes: [
+      'Saying recursion is slow rather than identifying overlapping subproblems.',
+      'Ignoring the safe-integer limit and returning a silently wrong result.',
+    ],
+    followUps: ['Why is the closed-form formula not a correct O(1) answer?', 'What does the memoized version cost in stack depth?'],
+  },
+
+  {
+    id: 'iv-algo-tree-traversal',
+    question: 'Traverse a nested comment tree. When would you choose BFS over DFS?',
+    topic: ALGO,
+    level: L.INTERMEDIATE,
+    kind: K.ALGORITHMS,
+    topicIds: ['recursion', 'algorithms', 'data-structures'],
+    relatedLessons: ['l-m38-02', 'l-m39-02'],
+    code: [
+      'const root = { id: 1, replies: [',
+      '  { id: 2, replies: [{ id: 4, replies: [] }] },',
+      '  { id: 3, replies: [] },',
+      '] };',
+      '',
+      'depthFirst(root);   // 1, 2, 4, 3',
+      'breadthFirst(root); // 1, 2, 3, 4',
+    ].join('\n'),
+    shortAnswer:
+      'DFS uses a stack (or the call stack) and goes deep first — natural for rendering nested threads and for anything needing the full path to a node. BFS uses a queue and visits level by level — the right choice for shortest-path-in-hops and for rendering only the top N levels.',
+    deepAnswer: [
+      'Both traversals, iteratively:\n\n```js\nfunction depthFirst(root) {\n  const out = [];\n  const stack = [root];\n  while (stack.length > 0) {\n    const node = stack.pop();\n    out.push(node.id);\n    for (let i = node.replies.length - 1; i >= 0; i--) {\n      stack.push(node.replies[i]);\n    }\n  }\n  return out;\n}\n\nfunction breadthFirst(root) {\n  const out = [];\n  const queue = [root];\n  let head = 0;\n  while (head < queue.length) {\n    const node = queue[head++];\n    out.push(node.id);\n    queue.push(...node.replies);\n  }\n  return out;\n}\n```',
+      'The only structural difference is stack versus queue. That is the sentence to lead with — everything else follows from it.',
+      'Two implementation details worth pointing out. DFS pushes children in **reverse** so they pop in original order. BFS advances a `head` index rather than calling `queue.shift()`, because `shift` is O(n) and turns the whole traversal into O(n²) on a wide tree — a real performance bug that hides in a lot of interview code.',
+      'Choosing between them: BFS finds the shallowest match first, so "the nearest node satisfying X" and "shortest path in unweighted hops" are BFS problems. DFS is natural when you need the path from the root — it is already on the stack — and for post-order work like computing a subtree size or total reply count.',
+      'Memory is the practical differentiator: DFS holds O(depth), BFS holds O(width). For a wide, shallow comment tree DFS is much cheaper; for a deep, narrow one BFS is.',
+      'The recursive DFS is shorter and usually clearer for tree rendering, but it is bounded by the engine\'s stack — around 10,000 frames. For user-supplied or arbitrarily deep data, the explicit stack is the safe choice.',
+      'For a general **graph** rather than a tree, both need a visited `Set` or they loop forever on a cycle. A comment tree should not have cycles, but data that arrived over a network has whatever shape it actually has — validating that assumption rather than trusting it is the mature answer.',
+    ],
+    keyPoints: [
+      'DFS is a stack, BFS is a queue — everything else follows',
+      'Push DFS children in reverse to preserve order',
+      'Use an index instead of `queue.shift()`; `shift` is O(n)',
+      'BFS for shallowest-match and level-limited rendering; DFS for paths and post-order',
+      'DFS costs O(depth) memory, BFS costs O(width)',
+      'Any graph traversal needs a visited `Set` to survive cycles',
+    ],
+    commonMistakes: [
+      'Using `queue.shift()` and making BFS quadratic.',
+      'Assuming recursive DFS is always safe regardless of depth.',
+    ],
+    followUps: ['Which uses less memory for a wide, shallow tree?', 'What breaks if the data contains a cycle?'],
+  },
+
+  {
+    id: 'iv-algo-move-zeroes',
+    question: 'Move all zeroes in an array to the end, in place, preserving the order of the other elements.',
+    topic: ALGO,
+    level: L.JUNIOR_PLUS,
+    kind: K.ALGORITHMS,
+    topicIds: ['algorithms', 'arrays'],
+    relatedLessons: ['l-m39-01'],
+    code: [
+      'const nums = [0, 1, 0, 3, 12];',
+      'moveZeroes(nums);',
+      '// nums is now [1, 3, 12, 0, 0]',
+    ].join('\n'),
+    shortAnswer:
+      'Two pointers: a write index that only advances when a non-zero is copied into it, then fill the remainder with zeroes. One pass, O(n) time, O(1) extra space — and stability falls out for free.',
+    deepAnswer: [
+      'The solution:\n\n```js\nfunction moveZeroes(nums) {\n  let write = 0;\n  for (let read = 0; read < nums.length; read++) {\n    if (nums[read] !== 0) {\n      nums[write] = nums[read];\n      write += 1;\n    }\n  }\n  while (write < nums.length) {\n    nums[write] = 0;\n    write += 1;\n  }\n  return nums;\n}\n```',
+      'The read/write two-pointer pattern is the transferable part. The same shape solves "remove duplicates from a sorted array", "remove all instances of a value", and any in-place compaction: read scans everything, write marks where the next kept element goes.',
+      'Stability is automatic because elements are copied in the order they are read. A swap-based variant also works and does fewer writes when zeroes are rare, but it is easier to get wrong and the difference rarely matters.',
+      '"In place" is the constraint that makes it interesting. `nums.filter(x => x !== 0)` plus padding is one line and O(n) time, but it allocates a new array — which is exactly what the question rules out. Say that you know the easy version exists and why it does not satisfy the constraint.',
+      'A common wrong approach is repeatedly calling `splice` to remove a zero and `push` it to the end. Each `splice` is O(n), so the whole thing becomes O(n²), and mutating the array while iterating forwards also skips elements.',
+      'Edge cases: an empty array, an array with no zeroes (the loop copies each element onto itself, which is correct but does n redundant writes — a `if (read !== write)` guard avoids them), and an all-zeroes array.',
+      'Note that `0 !== -0` is `false`, so `-0` is treated as a zero here. If that distinction mattered you would need `Object.is`, but for this problem treating them alike is correct.',
+    ],
+    keyPoints: [
+      'Read/write two pointers; one pass, O(n) time, O(1) space',
+      'The same pattern solves any in-place compaction problem',
+      'Stability comes free from copying in read order',
+      '`filter` + pad is simpler but allocates, violating the constraint',
+      'Repeated `splice` is O(n²) and skips elements',
+    ],
+    commonMistakes: [
+      'Using `splice` in a loop.',
+      'Producing a new array when the requirement is in place.',
+    ],
+    followUps: ['What other problems use the same two-pointer shape?', 'When is the swap variant preferable?'],
+  },
+];
+
+export default questions;
