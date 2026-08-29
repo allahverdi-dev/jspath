@@ -12,9 +12,7 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ### Planned
 
-- Cheat sheets
-- Placement assessment
-- Additional product refinements based on real usage and feedback
+- Additional product refinements based on real usage and feedback.
 
 ---
 
@@ -73,6 +71,20 @@ JSPath v1.0.0 marks the first public production release of the platform.
 - Aliases
 - Searchable metadata
 - Executable reference examples where supported
+
+#### Cheat Sheets
+
+- 9 JavaScript cheat sheets
+- Compact revision material covering core JavaScript concepts
+- Related lessons, references, and challenges
+- Dedicated cheat sheet browsing and detail pages
+
+#### Placement Assessment
+
+- Interactive placement assessment
+- Questions sampled across the authored curriculum
+- Starting-module recommendation based on assessment performance
+- Optional onboarding flow without restricting curriculum access
 
 #### Interactive Learning
 
