@@ -12,12 +12,13 @@ A free and comprehensive JavaScript learning platform designed to take learners 
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=000000)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=000000)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](LICENSE)
 
 <br />
 
 **47 curriculum modules · 214 lessons · 810 exercises · 171 coding challenges · 31 projects**
 
-[Live Demo](https://jspath.vercel.app) · [Getting Started](#getting-started) · [Architecture](#architecture) · [Project Status](#project-status)
+[Live Demo](https://jspath.vercel.app) · [Getting Started](#getting-started) · [Architecture](#architecture) · [Project Status](#project-status) · [License](#license--copyright)
 
 </div>
 
@@ -457,8 +458,6 @@ The current complete authored content passes with:
 0 warnings
 ```
 
----
-
 ### Reference Solution Verification
 
 Run:
@@ -474,10 +473,6 @@ Current verified totals:
 4,561 assertions
 0 failures
 ```
-
-This ensures that official exercise and challenge solutions actually satisfy the tests presented by the platform.
-
----
 
 ### Example Verification
 
@@ -499,7 +494,9 @@ The example remains valid in real browsers.
 
 ## Getting Started
 
-### 1. Clone the repository
+> **Important:** Access to the source code is provided for private evaluation, portfolio review, and demonstration only. The proprietary license does not grant permission to reuse, republish, distribute, or build derivative projects from JSPath.
+
+### 1. Clone the repository for private evaluation
 
 ```bash
 git clone https://github.com/allahverdi-dev/jspath.git
@@ -535,7 +532,7 @@ Supabase is optional.
 
 JSPath works in guest mode without any `.env` file.
 
-To enable Supabase integration, create:
+To enable Supabase integration in an authorized development environment, create:
 
 ```text
 .env
@@ -575,7 +572,7 @@ Do not commit real environment credentials to the repository.
 
 ## Development Checks
 
-Before considering a change ready, run:
+Authorized development work should pass:
 
 ```bash
 npm run lint
@@ -684,36 +681,11 @@ Instead, the platform focuses on:
 
 ---
 
-## Contributing
+## Feedback and Issue Reports
 
-Contributions, bug reports, and improvement suggestions are welcome.
+Bug reports, educational corrections, accessibility reports, and product feedback are welcome through GitHub Issues.
 
-Before submitting a significant change:
-
-1. Open an issue describing the proposed change.
-2. Keep changes focused and scoped.
-3. Follow the existing project architecture.
-4. Avoid introducing duplicate content or alternative sources of truth.
-5. Run all quality gates before opening a pull request.
-
-```bash
-npm run lint
-npm run test
-npm run content:audit
-npm run content:verify
-npm run content:examples
-npm run build
-```
-
-For educational content changes, also follow:
-
-[`docs/CONTENT-AUTHORING.md`](docs/CONTENT-AUTHORING.md)
-
----
-
-## Reporting Issues
-
-If you discover a bug, incorrect JavaScript explanation, broken exercise, invalid test, accessibility issue, or inconsistent example output, please open a GitHub issue with enough information to reproduce the problem.
+Code or content contributions should only be submitted by prior arrangement with the repository owner.
 
 For code-related issues, include:
 
@@ -732,19 +704,27 @@ For educational-content issues, include the relevant lesson, challenge, project,
 
 ## Security
 
-Do not include private API keys, Supabase secrets, credentials, authentication tokens, or other sensitive information in issues, pull requests, screenshots, or commits.
+Do not include private API keys, Supabase secrets, credentials, authentication tokens, or other sensitive information in issues, screenshots, or commits.
 
 Client-side environment variables should only contain values intended to be exposed to the browser.
 
 ---
 
-## License
+## License & Copyright
 
-An explicit open-source license has not yet been added to this repository.
+**Copyright © 2026 Allahverdi Həsənov. All Rights Reserved.**
 
-Until a `LICENSE` file is added, the repository should not be assumed to grant permission for redistribution, modification, or reuse beyond what is permitted by applicable law.
+JSPath is **not an open-source project**.
 
-A dedicated license will be added separately.
+The repository is publicly visible for portfolio review, demonstration, evaluation, and educational review only.
+
+Unless you receive prior written permission from the copyright owner, you may not copy, reuse, modify, republish, distribute, sublicense, sell, host, mirror, rebrand, create derivative works from, or incorporate the JSPath source code or educational content into another project.
+
+Private cloning is permitted only when reasonably necessary to evaluate the project. Any such copy must remain private and may not be redistributed or reused.
+
+See the full proprietary terms in [`LICENSE`](LICENSE).
+
+> Public visibility of this repository does not constitute permission to reuse its source code or content.
 
 ---
 
@@ -765,5 +745,9 @@ Live: [jspath.vercel.app](https://jspath.vercel.app)
 ### Learn JavaScript properly. Build with it. Understand why it works.
 
 [Open JSPath](https://jspath.vercel.app)
+
+<br /><br />
+
+**© 2026 Allahverdi Həsənov — All Rights Reserved**
 
 </div>
