@@ -1,0 +1,69 @@
+name: Educational content issue
+description: Report an incorrect or unclear lesson, challenge, project, interview question, or reference entry
+title: "[Content]: "
+labels:
+  - content
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for technical inaccuracies, unclear explanations, invalid examples, broken tests, or educational-content problems.
+
+  - type: dropdown
+    id: content_type
+    attributes:
+      label: Content type
+      options:
+        - Curriculum lesson
+        - Exercise
+        - Quiz
+        - Coding challenge
+        - Project
+        - Interview question
+        - Reference entry
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Content title or ID
+      placeholder: Module / lesson / challenge / project / reference title
+    validations:
+      required: true
+
+  - type: input
+    id: route
+    attributes:
+      label: Page / route
+      placeholder: /learn/..., /challenges/..., /reference/...
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What appears to be incorrect or unclear?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Suggested correction
+      description: If you know the correct explanation or behavior, describe it here.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting context
+      description: Include relevant specification references or reproducible code where useful.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have checked that this issue has not already been reported.
+          required: true
+        - label: I understand that JSPath is proprietary and this report does not grant reuse rights.
+          required: true
