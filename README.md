@@ -367,7 +367,6 @@ src/
 docs/
 ├── ARCHITECTURE.md
 ├── CONTENT-AUTHORING.md
-├── CONTENT-PROGRESS.md
 ├── LEARNING-MODEL.md
 └── SUPABASE.md
 
