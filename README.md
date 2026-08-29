@@ -8,6 +8,7 @@ A free and comprehensive JavaScript learning platform designed to take learners 
 
 <br />
 
+[![CI](https://github.com/allahverdi-dev/jspath/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/allahverdi-dev/jspath/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-jspath.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://jspath.vercel.app)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=000000)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=000000)](https://react.dev/)
@@ -18,7 +19,7 @@ A free and comprehensive JavaScript learning platform designed to take learners 
 
 **47 curriculum modules · 214 lessons · 810 exercises · 171 coding challenges · 31 projects**
 
-[Live Demo](https://jspath.vercel.app) · [Getting Started](#getting-started) · [Architecture](#architecture) · [Project Status](#project-status) · [License](#license--copyright)
+[Live Demo](https://jspath.vercel.app) · [Getting Started](#getting-started) · [Architecture](#architecture) · [Project Status](#project-status) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [License](#license--copyright)
 
 </div>
 
@@ -417,6 +418,8 @@ This prevents the UI from presenting statistics that do not reflect actual autho
 
 ## Quality Assurance
 
+Every push to `main` and every pull request targeting `main` is checked by the repository's [GitHub Actions CI workflow](https://github.com/allahverdi-dev/jspath/actions/workflows/ci.yml).
+
 JSPath includes several independent quality gates.
 
 Current status:
@@ -683,7 +686,9 @@ Instead, the platform focuses on:
 
 ## Feedback and Issue Reports
 
-Bug reports, educational corrections, accessibility reports, and product feedback are welcome through GitHub Issues.
+Bug reports, educational corrections, accessibility reports, and product feedback are welcome through [GitHub Issues](https://github.com/allahverdi-dev/jspath/issues).
+
+Structured issue templates are available for bug reports, educational-content problems, and feature suggestions.
 
 Code or content contributions should only be submitted by prior arrangement with the repository owner.
 
@@ -703,6 +708,10 @@ For educational-content issues, include the relevant lesson, challenge, project,
 ---
 
 ## Security
+
+Security vulnerabilities should not be disclosed in a public issue when doing so could put users, data, authentication flows, sandbox boundaries, or deployment infrastructure at risk.
+
+See [`SECURITY.md`](SECURITY.md) for the responsible disclosure policy.
 
 Do not include private API keys, Supabase secrets, credentials, authentication tokens, or other sensitive information in issues, screenshots, or commits.
 
