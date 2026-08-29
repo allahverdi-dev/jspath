@@ -1,0 +1,98 @@
+JSPath Proprietary License
+Copyright © 2026 Allahverdi Həsənov. All Rights Reserved.
+
+IMPORTANT — READ CAREFULLY
+
+This repository, including its source code, educational content, written materials,
+examples, exercises, challenges, projects, interview questions, reference content,
+design, structure, branding, documentation, and other associated materials
+(collectively, the “Project”), is proprietary intellectual property owned by
+Allahverdi Həsənov unless a specific third-party component states otherwise.
+
+1. PUBLIC VISIBILITY DOES NOT GRANT A LICENSE
+
+The Project is made publicly visible for portfolio review, demonstration,
+educational review, and evaluation purposes only.
+
+Public access to this repository does not grant any license or permission to use,
+copy, reproduce, modify, adapt, translate, distribute, publish, sublicense, sell,
+commercialize, host, mirror, repurpose, or create derivative works from the Project
+or any substantial portion of it.
+
+2. LIMITED PERMISSION FOR REVIEW
+
+You may:
+
+- view the publicly available source code and content;
+- inspect the Project for evaluation, portfolio review, or educational review;
+- access and use the official live demonstration made available by the copyright owner;
+- clone the repository solely when reasonably necessary for private, non-public
+  evaluation of the Project.
+
+Any local copy made for evaluation must remain private and may not be redistributed,
+published, uploaded, shared, incorporated into another project, or used to create
+a competing or derivative product.
+
+3. PROHIBITED USES
+
+Without prior written permission from the copyright owner, you may not:
+
+- copy or reuse source code in another project;
+- copy, reproduce, or republish lessons, explanations, examples, exercises,
+  challenges, projects, interview materials, reference entries, or other content;
+- modify or adapt the Project for personal, academic, commercial, or public use;
+- distribute, sublicense, resell, rent, lease, or otherwise provide the Project
+  or any substantial portion of it to another person or organization;
+- publish a fork, mirror, clone, rebranded version, derivative work, or substantially
+  similar reproduction of the Project;
+- use the Project, its content, or its structure to build or train a competing
+  learning platform, course, application, dataset, or commercial product;
+- remove, obscure, or alter copyright, ownership, attribution, or proprietary notices;
+- represent the Project or any substantial portion of it as your own work;
+- use the JSPath name, branding, logo, or visual identity in a way that suggests
+  authorization, endorsement, affiliation, or ownership.
+
+4. NO OPEN-SOURCE LICENSE
+
+This Project is not released under MIT, Apache, GPL, BSD, Creative Commons,
+or any other open-source or open-content license.
+
+No rights are granted by implication, estoppel, public availability, repository
+visibility, or otherwise.
+
+5. THIRD-PARTY COMPONENTS
+
+The Project may depend on third-party libraries, frameworks, tools, fonts, APIs,
+or other components governed by their own licenses and terms.
+
+Those third-party licenses apply only to the respective third-party components and
+do not grant rights to the original JSPath source code, content, branding, design,
+documentation, or other proprietary materials.
+
+6. PERMISSION REQUESTS
+
+Any permission to reuse, reproduce, adapt, distribute, publish, commercialize,
+or otherwise exploit the Project must be obtained in advance and in writing from
+the copyright owner.
+
+Permission may be granted or denied at the sole discretion of the copyright owner
+and may be subject to separate terms.
+
+7. NO WARRANTY
+
+THE PROJECT IS PROVIDED “AS IS” FOR DEMONSTRATION AND EVALUATION PURPOSES,
+WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+NON-INFRINGEMENT, ACCURACY, OR AVAILABILITY.
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT OWNER SHALL NOT
+BE LIABLE FOR ANY CLAIM, LOSS, DAMAGE, OR OTHER LIABILITY ARISING FROM ACCESS TO,
+REVIEW OF, OR USE OF THE PROJECT.
+
+8. RESERVATION OF RIGHTS
+
+All rights not expressly granted in this license are reserved by the copyright owner.
+
+For permission requests, contact the copyright owner through the official repository:
+
+https://github.com/allahverdi-dev/jspath
