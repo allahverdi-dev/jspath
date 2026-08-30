@@ -32,7 +32,6 @@ export default function ReferenceDetail() {
   if (!entry) return <ContentSkeleton lines={8} />;
 
   const lesson = entry.lessonId ? lessonById[entry.lessonId] : null;
-  const module = lesson ? moduleById[lesson.moduleId] : null;
   const relatedLessons = (entry.relatedLessons ?? []).map((id) => lessonById[id]).filter(Boolean);
   const related = (entry.relatedEntries ?? []).map((id) => referenceById[id]).filter(Boolean);
   const practice = (entry.practiceIds ?? [])
@@ -170,12 +169,12 @@ export default function ReferenceDetail() {
         <Card className="mt-4 p-5">
           <SectionLabel className="mb-3">Learn this properly</SectionLabel>
           <ul className="space-y-2">
-            {[lesson, ...relatedLessons].filter(Boolean).map((l, i, all) => (
+            {[lesson, ...relatedLessons].filter((l) => l && moduleById[l.moduleId]).map((l, i, all) => (
               all.findIndex((x) => x.id === l.id) !== i ? null : (
                 <li key={l.id} className="flex items-start gap-2">
                   <Icon name="article" size={15} className="mt-1 shrink-0 text-on-surface-variant" />
                   <Link
-                    to={`/learn/${moduleById[l.moduleId]?.slug ?? module?.slug}/${l.slug}`}
+                    to={`/learn/${moduleById[l.moduleId].slug}/${l.slug}`}
                     className="font-body-md text-primary-ink underline underline-offset-2"
                   >
                     {l.title}

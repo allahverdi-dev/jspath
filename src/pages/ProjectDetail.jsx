@@ -242,6 +242,7 @@ export default function ProjectDetail() {
                   const lesson = lessonById[id];
                   if (!lesson) return null;
                   const module = moduleById[lesson.moduleId];
+                  if (!module) return null;
                   return (
                     <Link key={id} to={`/learn/${module.slug}/${lesson.slug}`} className="block font-body-sm text-on-surface-variant transition hover:text-on-surface">
                       <Icon name="article" size={14} className="mr-1.5 inline" />{lesson.title}

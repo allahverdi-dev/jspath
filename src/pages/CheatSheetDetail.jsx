@@ -87,8 +87,8 @@ export default function CheatSheetDetail() {
 
   const lessons = (sheet.relatedLessons ?? [])
     .map((id) => lessonById[id])
-    .filter(Boolean)
-    .map((l) => ({ to: `/learn/${moduleById[l.moduleId]?.slug}/${l.slug}`, label: l.title }));
+    .filter((l) => l && moduleById[l.moduleId])
+    .map((l) => ({ to: `/learn/${moduleById[l.moduleId].slug}/${l.slug}`, label: l.title }));
 
   const reference = (sheet.relatedReference ?? [])
     .map((id) => referenceById[id])

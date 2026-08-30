@@ -75,9 +75,9 @@ export default function Placement() {
     });
     const ratio = correct.length / questions.length;
 
-    // Recommend the first module where the learner got a question wrong.
+    // Recommend the first module where the learner got a question wrong, or advanced module if all correct.
     const firstWrong = questions.find((q) => answers[q.id] !== q.correct);
-    const recommended = firstWrong ? moduleById[firstWrong.moduleId] : moduleById.m00;
+    const recommended = firstWrong ? moduleById[firstWrong.moduleId] : (moduleById.m21 ?? moduleById.m00);
 
     return (
       <div className="mx-auto max-w-2xl px-4 py-16">
@@ -87,8 +87,9 @@ export default function Placement() {
           </h1>
           <ProgressBar value={ratio} className="mt-4" height={6} label="Placement score" />
           <p className="mt-5 font-body-md leading-7 text-on-surface-variant">
-            This is a short sample, not a verdict — ten questions cannot measure everything you know.
-            It is enough to suggest a sensible place to begin.
+            {correct.length === questions.length
+              ? 'Outstanding! You showed strong mastery across all fundamentals sampled in this check. You can jump directly into advanced topics or explore interview challenges.'
+              : 'This is a short sample, not a verdict — ten questions cannot measure everything you know. It is enough to suggest a sensible place to begin.'}
           </p>
 
           {recommended && (

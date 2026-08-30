@@ -35,7 +35,7 @@ export function CodeEditor({
   useEffect(() => {
     if (monacoFailed) return undefined;
     const timer = setTimeout(() => {
-      if (!document.querySelector('.monaco-editor')) setMonacoFailed((f) => f || false);
+      if (!document.querySelector('.monaco-editor')) setMonacoFailed(true);
     }, 8000);
     return () => clearTimeout(timer);
   }, [monacoFailed]);

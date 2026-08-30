@@ -300,6 +300,7 @@ export default function Lesson() {
                   const related = lessonById[id];
                   if (!related) return null;
                   const relatedModule = moduleById[related.moduleId];
+                  if (!relatedModule) return null;
                   return (
                     <Card
                       key={id}
