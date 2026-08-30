@@ -5,6 +5,9 @@ every lesson, exercise, challenge, quiz and project works, saved to `localStorag
 
 Configure it only if you want accounts and cross-device sync.
 
+Paid-plan state uses separate protected tables and Edge Functions. See
+[`BILLING_GUMROAD.md`](BILLING_GUMROAD.md); never put entitlements in `user_progress`.
+
 ## 1. Environment
 
 ```bash

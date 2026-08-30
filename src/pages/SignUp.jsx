@@ -1,16 +1,20 @@
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { AuthLayout } from '../layouts/AuthLayout.jsx';
 import { Icon } from '../components/ui/index.jsx';
 import { OAuthButtons } from '../components/auth/OAuthButtons.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
+import { safeApplicationPath } from '../features/billing/plans.js';
 
 export default function SignUp() {
   const { loading, isAuthenticated, isConfigured } = useAuth();
   const { state } = useUserState();
+  const [params] = useSearchParams();
   const completed = Object.values(state.lessons).filter((lesson) => lesson.completedAt).length;
+  const requestedNext = params.get('next');
+  const nextPath = safeApplicationPath(requestedNext, '/onboarding/level');
 
-  if (!loading && isAuthenticated) return <Navigate to="/onboarding/level" replace />;
+  if (!loading && isAuthenticated) return <Navigate to={nextPath} replace />;
 
   return (
     <AuthLayout
@@ -41,7 +45,7 @@ export default function SignUp() {
             </div>
           )}
 
-          <OAuthButtons redirectPath="/onboarding/level" guestPath="/onboarding/level" />
+          <OAuthButtons redirectPath={nextPath} guestPath="/onboarding/level" />
         </>
       )}
     </AuthLayout>

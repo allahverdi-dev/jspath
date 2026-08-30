@@ -4,7 +4,7 @@
 
 ### Master JavaScript through structured learning, real practice, projects, challenges, and interview preparation.
 
-A free and comprehensive JavaScript learning platform designed to take learners from their first line of code to advanced, professional JavaScript.
+A comprehensive JavaScript learning platform with a generous free path and optional Pro guided experiences.
 
 <br />
 
@@ -35,7 +35,7 @@ The platform combines structured lessons, executable examples, interactive exerc
 
 JSPath is designed to support learners from absolute beginner level through advanced JavaScript topics while keeping the learning experience practical, measurable, and self-directed.
 
-The entire learning experience can be used without creating an account.
+Core learning can be used without creating an account. Accounts add cloud sync, and optional Pro access unlocks advanced guided experiences.
 
 ### Live application
 
@@ -218,11 +218,11 @@ A textarea fallback is available when Monaco cannot be loaded.
 
 ### Guest Mode
 
-Creating an account is not required.
+Creating an account is not required for the guest learning path.
 
 Guest progress is stored locally using `localStorage`, allowing the core learning experience to work without a backend.
 
-Supabase integration is optional.
+Supabase integration is optional for local guest learning. When configured, it provides OAuth identity, cloud progress sync, and protected subscription entitlement state; Gumroad handles optional Pro checkout and recurring billing.
 
 When authentication is enabled, the architecture supports merging guest learning progress into an account without discarding stronger existing results.
 
@@ -292,7 +292,8 @@ The interface also considers:
 | Routing | React Router 6 |
 | Styling | Tailwind CSS 3 |
 | Code editor | Monaco Editor |
-| Backend / Auth | Supabase — optional |
+| Backend / Auth / Entitlements | Supabase — optional for guest learning |
+| Billing | Gumroad Memberships — optional |
 | Testing | Vitest |
 | Component testing | Testing Library |
 | DOM test environment | jsdom |

@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { Card, Badge, Tabs, EmptyState, Input } from '../components/ui/index.jsx';
 import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 import { references } from '../content/registry.js';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
 
 export default function Reference() {
+  const { canAccessContent } = useEntitlements();
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
 
@@ -58,6 +60,7 @@ export default function Reference() {
                 <Badge tone="neutral">{r.category}</Badge>
                 {r.environment !== 'ECMAScript' && <Badge tone="info">{r.environment}</Badge>}
                 {r.mutates && <Badge tone="warning" icon="edit">mutates</Badge>}
+                {!canAccessContent('reference', r.id) && <Badge tone="primary" icon="lock">Pro</Badge>}
               </div>
             </Card>
           ))}

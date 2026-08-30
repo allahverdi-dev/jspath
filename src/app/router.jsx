@@ -1,9 +1,12 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AppShell, FocusLayout } from '../layouts/AppShell.jsx';
 import { RouteError } from '../components/feedback/RouteError.jsx';
 import { PageSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary.jsx';
+import { ContentGate, FeatureGate } from '../components/billing/FeatureGate.jsx';
+import { FEATURE } from '../features/billing/plans.js';
+import { cheatSheetBySlug, exerciseById, lessonBySlug, moduleBySlug, referenceBySlug } from '../content/registry.js';
 
 /* Every page is code-split. The shell paints immediately; the route streams in. */
 const Landing = lazy(() => import('../pages/Landing.jsx'));
@@ -34,6 +37,7 @@ const SearchPage = lazy(() => import('../pages/SearchPage.jsx'));
 const Settings = lazy(() => import('../pages/Settings.jsx'));
 const Login = lazy(() => import('../pages/Login.jsx'));
 const SignUp = lazy(() => import('../pages/SignUp.jsx'));
+const Pricing = lazy(() => import('../pages/Pricing.jsx'));
 const OnboardingLevel = lazy(() => import('../pages/OnboardingLevel.jsx'));
 const OnboardingGoals = lazy(() => import('../pages/OnboardingGoals.jsx'));
 const Placement = lazy(() => import('../pages/Placement.jsx'));
@@ -51,6 +55,12 @@ function Page({ element }) {
   );
 }
 
+function ContentRouteGate({ kind, param, index, children, ...lockedProps }) {
+  const params = useParams();
+  const item = index[params[param]];
+  return <ContentGate kind={kind} id={item?.id} {...lockedProps}>{children}</ContentGate>;
+}
+
 export function AppRouter() {
   return (
     <Routes>
@@ -64,29 +74,30 @@ export function AppRouter() {
 
       {/* Distraction-free reading and sessions */}
       <Route element={<FocusLayout />}>
-        <Route path="/learn/:moduleSlug/:lessonSlug" element={<Page element={<Lesson />} />} />
-        <Route path="/interview/session" element={<Page element={<InterviewSession />} />} />
-        <Route path="/practice/session" element={<Page element={<PracticeSession />} />} />
+        <Route path="/learn/:moduleSlug/:lessonSlug" element={<ContentRouteGate kind="lesson" param="lessonSlug" index={lessonBySlug} title="This lesson is included with Pro" backTo="/curriculum"><Page element={<Lesson />} /></ContentRouteGate>} />
+        <Route path="/interview/session" element={<FeatureGate feature={FEATURE.INTERVIEW_PRO} title="Interview practice sessions are included with Pro" backTo="/interview"><Page element={<InterviewSession />} /></FeatureGate>} />
+        <Route path="/practice/session" element={<FeatureGate feature={FEATURE.PREMIUM_PRACTICE} title="Guided practice sessions are included with Pro" backTo="/practice"><Page element={<PracticeSession />} /></FeatureGate>} />
       </Route>
 
       {/* Main application */}
       <Route element={<AppShell />}>
         <Route path="/dashboard" element={<Page element={<Dashboard />} />} />
+        <Route path="/pricing" element={<Page element={<Pricing />} />} />
         <Route path="/curriculum" element={<Page element={<Curriculum />} />} />
-        <Route path="/curriculum/:moduleSlug" element={<Page element={<ModuleDetail />} />} />
+        <Route path="/curriculum/:moduleSlug" element={<ContentRouteGate kind="module" param="moduleSlug" index={moduleBySlug} title="This curriculum module is included with Pro" backTo="/curriculum"><Page element={<ModuleDetail />} /></ContentRouteGate>} />
         <Route path="/practice" element={<Page element={<PracticeHub />} />} />
-        <Route path="/practice/exercise/:exerciseId" element={<Page element={<ExercisePage />} />} />
+        <Route path="/practice/exercise/:exerciseId" element={<ContentRouteGate kind="exercise" param="exerciseId" index={exerciseById} title="This exercise is included with Pro" backTo="/practice"><Page element={<ExercisePage />} /></ContentRouteGate>} />
         <Route path="/challenges" element={<Page element={<Challenges />} />} />
-        <Route path="/challenges/:slug" element={<Page element={<ChallengeDetail />} />} />
+        <Route path="/challenges/:slug" element={<FeatureGate feature={FEATURE.CHALLENGES} title="Coding challenges are included with Pro" backTo="/challenges"><Page element={<ChallengeDetail />} /></FeatureGate>} />
         <Route path="/projects" element={<Page element={<Projects />} />} />
-        <Route path="/projects/:slug" element={<Page element={<ProjectDetail />} />} />
+        <Route path="/projects/:slug" element={<FeatureGate feature={FEATURE.PROJECTS} title="Guided projects are included with Pro" backTo="/projects"><Page element={<ProjectDetail />} /></FeatureGate>} />
         <Route path="/playground" element={<Page element={<Playground />} />} />
         <Route path="/interview" element={<Page element={<InterviewPrep />} />} />
-        <Route path="/interview/question/:questionId" element={<Page element={<InterviewQuestionPage />} />} />
+        <Route path="/interview/question/:questionId" element={<FeatureGate feature={FEATURE.INTERVIEW_PRO} title="Complete Interview Prep is included with Pro" backTo="/interview"><Page element={<InterviewQuestionPage />} /></FeatureGate>} />
         <Route path="/reference" element={<Page element={<Reference />} />} />
-        <Route path="/reference/:slug" element={<Page element={<ReferenceDetail />} />} />
+        <Route path="/reference/:slug" element={<ContentRouteGate kind="reference" param="slug" index={referenceBySlug} title="This reference section is included with Pro" backTo="/reference"><Page element={<ReferenceDetail />} /></ContentRouteGate>} />
         <Route path="/cheat-sheets" element={<Page element={<CheatSheets />} />} />
-        <Route path="/cheat-sheets/:slug" element={<Page element={<CheatSheetDetail />} />} />
+        <Route path="/cheat-sheets/:slug" element={<ContentRouteGate kind="cheatsheet" param="slug" index={cheatSheetBySlug} title="This cheat sheet is included with Pro" backTo="/cheat-sheets"><Page element={<CheatSheetDetail />} /></ContentRouteGate>} />
         <Route path="/profile" element={<Page element={<Profile />} />} />
         <Route path="/achievements" element={<Page element={<Achievements />} />} />
         <Route path="/my-learning" element={<Page element={<MyLearning />} />} />

@@ -6,11 +6,15 @@ import { useUserState } from '../state/UserStateProvider.jsx';
 import { interviewQuestions, contentIndex } from '../content/registry.js';
 import { weakTopics } from '../features/mastery/masteryEngine.js';
 import { INTERVIEW_LEVELS, INTERVIEW_KIND_LABEL } from '../content/schema/types.js';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
+import { FEATURE } from '../features/billing/plans.js';
 
 const LEVELS = INTERVIEW_LEVELS;
 
 export default function InterviewPrep() {
   const { state } = useUserState();
+  const { hasFeature } = useEntitlements();
+  const interviewUnlocked = hasFeature(FEATURE.INTERVIEW_PRO);
   const [level, setLevel] = useState('all');
   const [topic, setTopic] = useState('all');
   const [kind, setKind] = useState('all');
@@ -44,7 +48,9 @@ export default function InterviewPrep() {
             understanding. {seen} of {interviewQuestions.length} worked through.
           </p>
         </div>
-        <Button to="/interview/session" size="lg" icon="play_arrow">Start practice session</Button>
+        <Button to="/interview/session" size="lg" icon={interviewUnlocked ? 'play_arrow' : 'lock'}>
+          {interviewUnlocked ? 'Start practice session' : 'Pro practice session'}
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
@@ -82,6 +88,7 @@ export default function InterviewPrep() {
                       <span className="mt-2 flex flex-wrap gap-2">
                         <Badge tone="neutral">{q.topic}</Badge>
                         <Badge tone="info">{q.level}</Badge>
+                        {!interviewUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
                       </span>
                     </span>
                   </Card>

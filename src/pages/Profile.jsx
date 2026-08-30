@@ -7,10 +7,12 @@ import { contentIndex } from '../content/registry.js';
 import { overallMastery, rankFor } from '../features/mastery/masteryEngine.js';
 import { curriculumProgress, exerciseStats, challengeStats, projectStats } from '../features/progress/progressEngine.js';
 import { evaluateAchievements } from '../features/achievements/achievements.js';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
 
 export default function Profile() {
   const { state, xp, streak, isGuest, syncStatus } = useUserState();
   const { displayName, user, signOut, isConfigured } = useAuth();
+  const { plan, isPro } = useEntitlements();
 
   const mastery = useMemo(() => overallMastery(state, contentIndex.topics, contentIndex), [state]);
   const progress = useMemo(() => curriculumProgress(state, contentIndex.modules), [state]);
@@ -40,11 +42,13 @@ export default function Profile() {
               <Badge tone="neutral" icon="local_fire_department">{streak} day streak</Badge>
               <Badge tone="neutral" icon="military_tech">{unlocked.length} achievements</Badge>
               {isGuest ? <Badge tone="warning">Guest</Badge> : <Badge tone="success">Signed in</Badge>}
+              {!isGuest && <Badge tone={isPro ? 'primary' : 'neutral'} icon={isPro ? 'workspace_premium' : undefined}>{isPro ? 'Pro' : plan}</Badge>}
               {syncStatus === 'syncing' && <Badge tone="info">Syncing…</Badge>}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button to="/settings" variant="secondary" icon="settings">Settings</Button>
+            <Button to="/pricing" variant={isPro ? 'secondary' : 'primary'} icon={isPro ? 'workspace_premium' : 'upgrade'}>{isPro ? 'Manage plan' : 'Upgrade'}</Button>
             {isGuest ? (
               <Button to="/signup" icon="person_add">Create account</Button>
             ) : (

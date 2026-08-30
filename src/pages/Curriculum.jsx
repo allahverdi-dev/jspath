@@ -9,6 +9,7 @@ import { contentIndex, lessonsByModule, contentStats } from '../content/registry
 import { moduleProgress, curriculumProgress } from '../features/progress/progressEngine.js';
 import { overallMastery, rankFor } from '../features/mastery/masteryEngine.js';
 import { TRACK_LABEL } from '../content/schema/types.js';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -21,11 +22,12 @@ const FILTERS = [
  * The curriculum screen.
  *
  * Every count shown here is derived from the actual content — a module reporting
- * "14 lessons" has fourteen real lessons behind it. Nothing is locked: modules are
- * ordered as a recommended path, but a learner may open any of them at any time.
+ * "14 lessons" has fourteen real lessons behind it. Modules are ordered as a
+ * recommended path, while explicit access tags determine any Pro content.
  */
 export default function Curriculum() {
   const { state } = useUserState();
+  const { canAccessContent } = useEntitlements();
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(null);
@@ -101,6 +103,7 @@ export default function Curriculum() {
               const lessons = lessonsByModule[module.id] ?? [];
               const isOpen = expanded === module.id;
               const p = module.progress;
+              const moduleUnlocked = canAccessContent('module', module.id);
 
               return (
                 <Card key={module.id} className="overflow-hidden">
@@ -116,6 +119,7 @@ export default function Curriculum() {
                             </span>
                             <DifficultyBadge difficulty={module.difficulty} />
                             <Badge tone="neutral">{TRACK_LABEL[module.track]}</Badge>
+                            {!moduleUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
                           </div>
                           <h2 className="font-heading text-title-md text-on-surface">
                             <Link to={`/curriculum/${module.slug}`} className="hover:text-primary-ink">
@@ -165,6 +169,7 @@ export default function Curriculum() {
                           {lessons.map((lesson, i) => {
                             const done = Boolean(state.lessons[lesson.id]?.completedAt);
                             const visited = Boolean(state.lessons[lesson.id]?.lastVisitedAt);
+                            const lessonUnlocked = canAccessContent('lesson', lesson.id);
                             return (
                               <li key={lesson.id}>
                                 <Link
@@ -183,6 +188,7 @@ export default function Curriculum() {
                                     </span>
                                     {lesson.title}
                                   </span>
+                                  {!lessonUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
                                   <span className="shrink-0 font-mono text-code-sm text-on-surface-variant">
                                     {lesson.estimatedMinutes}m
                                   </span>

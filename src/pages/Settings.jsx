@@ -5,12 +5,15 @@ import { useTheme, THEMES } from '../state/ThemeProvider.jsx';
 import { useToast } from '../state/ToastProvider.jsx';
 import { isPersistent, usageBytes } from '../services/storage.js';
 import { useAuth } from '../state/AuthProvider.jsx';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
+import { GUMROAD_MANAGE_URL } from '../features/billing/plans.js';
 
 export default function Settings() {
   const { state, actions } = useUserState();
   const { preference, setTheme } = useTheme();
   const toast = useToast();
   const { isAuthenticated, isConfigured } = useAuth();
+  const { plan, isPro, subscription, billingConfigured } = useEntitlements();
   const [confirmReset, setConfirmReset] = useState(false);
 
   const s = state.settings;
@@ -108,6 +111,35 @@ export default function Settings() {
               checked={Boolean(s.autoRunExamples)}
               onChange={(v) => set({ autoRunExamples: v })}
             />
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionLabel className="mb-3">Plan & billing</SectionLabel>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="font-heading text-title-md capitalize text-on-surface">{plan} plan</p>
+              <p className="mt-1 font-body-sm text-on-surface-variant">
+                {!isAuthenticated
+                  ? 'Sign in before purchasing Pro so Gumroad can be linked securely to your account.'
+                  : subscription
+                    ? `${subscription.status.replace('_', ' ')}${subscription.billing_interval ? ` · ${subscription.billing_interval}` : ''}`
+                    : billingConfigured
+                      ? 'Your account currently has Free access.'
+                      : 'Billing is unavailable in this deployment; learning continues normally.'}
+              </p>
+              {subscription?.current_period_end && (
+                <p className="mt-1 font-body-sm text-on-surface-variant">
+                  {subscription.status === 'canceling' ? 'Access until' : 'Renewal/access review'}:{' '}
+                  {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(subscription.current_period_end))}
+                </p>
+              )}
+            </div>
+            {isPro ? (
+              <Button href={GUMROAD_MANAGE_URL} target="_blank" rel="noreferrer" variant="secondary" size="sm">Manage subscription</Button>
+            ) : (
+              <Button to="/pricing" size="sm" icon="upgrade">View Pro</Button>
+            )}
           </div>
         </Card>
 

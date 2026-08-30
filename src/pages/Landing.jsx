@@ -10,7 +10,7 @@ const FEATURES = [
   { icon: 'psychology', title: 'Honest mastery', body: 'Clicking “complete” does not make you a master. Topic scores come from solved exercises and quiz accuracy, and decay if you leave them.' },
   { icon: 'record_voice_over', title: 'Interview preparation', body: 'A 30-second answer for the room and a deeper explanation for understanding, with key-point checklists you can score yourself against.' },
   { icon: 'terminal', title: 'Code that actually runs', body: 'Every runnable example executes in an isolated worker. Infinite loops are interrupted rather than freezing your tab.' },
-  { icon: 'lock_open', title: 'Free, and no account needed', body: 'Everything works as a guest, saved in your browser. Create an account only if you want to sync across devices.' },
+  { icon: 'lock_open', title: 'Start free, no account needed', body: 'Core learning works as a guest and is saved in your browser. Create an account for sync, or choose Pro for advanced guided experiences.' },
 ];
 
 const SAMPLE = [
@@ -37,6 +37,7 @@ export default function Landing() {
           <Link to="/"><Logo /></Link>
           <nav className="ml-auto flex items-center gap-2">
             <Button to="/curriculum" variant="ghost" size="sm">Curriculum</Button>
+            <Button to="/pricing" variant="ghost" size="sm">Pricing</Button>
             <Button to="/login" variant="secondary" size="sm">Log in</Button>
             <Button to="/dashboard" size="sm">Start learning</Button>
           </nav>
@@ -48,7 +49,7 @@ export default function Landing() {
         <section className="mx-auto w-full max-w-container-max px-4 py-16 lg:px-8 lg:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
-              <Badge tone="primary" className="mb-5">Free · No account required</Badge>
+              <Badge tone="primary" className="mb-5">Start free · No account required</Badge>
               <h1 className="font-display text-display-lg text-on-surface">
                 Learn JavaScript properly.
               </h1>
@@ -105,7 +106,7 @@ export default function Landing() {
           <h2 className="font-display text-headline-md text-on-surface">Start where you are</h2>
           <p className="mx-auto mt-3 max-w-xl font-body-lg text-on-surface-variant">
             Never written code? Begin at Module 00. Already comfortable? Take the placement check and
-            jump in. Nothing is ever locked.
+            jump in. Core learning stays available without an account, with Pro for advanced guided practice.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button to="/onboarding/level" size="lg" iconRight="arrow_forward">Get started</Button>
@@ -117,12 +118,13 @@ export default function Landing() {
       <footer className="border-t border-outline-variant">
         <div className="mx-auto flex w-full max-w-container-max flex-wrap items-center gap-4 px-4 py-8 lg:px-8">
           <Logo size="sm" />
-          <p className="font-body-sm text-on-surface-variant">A free, open JavaScript learning platform.</p>
+          <p className="font-body-sm text-on-surface-variant">A JavaScript learning platform with a generous free path.</p>
           <nav className="ml-auto flex flex-wrap gap-4 font-body-sm text-on-surface-variant">
             <Link to="/curriculum" className="hover:text-on-surface">Curriculum</Link>
             <Link to="/cheat-sheets" className="hover:text-on-surface">Cheat sheets</Link>
             <Link to="/interview" className="hover:text-on-surface">Interview prep</Link>
             <Link to="/reference" className="hover:text-on-surface">Reference</Link>
+            <Link to="/pricing" className="hover:text-on-surface">Pricing</Link>
           </nav>
         </div>
       </footer>

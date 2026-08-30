@@ -4,6 +4,7 @@ import { AppRouter } from './router.jsx';
 import { ThemeProvider } from '../state/ThemeProvider.jsx';
 import { ToastProvider } from '../state/ToastProvider.jsx';
 import { AuthProvider } from '../state/AuthProvider.jsx';
+import { EntitlementProvider } from '../state/EntitlementProvider.jsx';
 import { UserStateProvider, useUserState } from '../state/UserStateProvider.jsx';
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary.jsx';
 import { RouteError } from '../components/feedback/RouteError.jsx';
@@ -39,11 +40,13 @@ export function App() {
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>
-            <UserStateProvider>
-              <PreferencesEffect />
-              <ScrollToTop />
-              <AppRouter />
-            </UserStateProvider>
+            <EntitlementProvider>
+              <UserStateProvider>
+                <PreferencesEffect />
+                <ScrollToTop />
+                <AppRouter />
+              </UserStateProvider>
+            </EntitlementProvider>
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>

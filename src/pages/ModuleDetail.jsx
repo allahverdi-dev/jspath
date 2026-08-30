@@ -9,10 +9,12 @@ import { moduleProgress } from '../features/progress/progressEngine.js';
 import { allTopicMastery } from '../features/mastery/masteryEngine.js';
 import { TRACK_LABEL } from '../content/schema/types.js';
 import { TOPIC_BY_ID } from '../content/topics.js';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
 
 export default function ModuleDetail() {
   const { moduleSlug } = useParams();
   const { state } = useUserState();
+  const { canAccessContent } = useEntitlements();
   const module = moduleBySlug[moduleSlug];
 
   const progress = useMemo(() => (module ? moduleProgress(state, module) : null), [state, module]);
@@ -81,6 +83,7 @@ export default function ModuleDetail() {
             <ol className="space-y-2">
               {lessons.map((lesson, i) => {
                 const done = Boolean(state.lessons[lesson.id]?.completedAt);
+                const lessonUnlocked = canAccessContent('lesson', lesson.id);
                 return (
                   <li key={lesson.id}>
                     <Card as={Link} to={`/learn/${module.slug}/${lesson.slug}`} interactive className="flex items-start gap-4 p-4">
@@ -98,6 +101,7 @@ export default function ModuleDetail() {
                             {String(i + 1).padStart(2, '0')}
                           </span>
                           <span className="font-body-md font-semibold text-on-surface">{lesson.title}</span>
+                          {!lessonUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
                         </span>
                         <span className="mt-1 block font-body-sm text-on-surface-variant">{lesson.description}</span>
                         <span className="mt-2 flex flex-wrap items-center gap-3 font-mono text-code-sm text-on-surface-variant">

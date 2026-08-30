@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Icon, Badge, EmptyState, Input, Tabs } from '../components/ui/index.jsx';
 import { cheatSheets } from '../content/registry.js';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
 
 export default function CheatSheets() {
+  const { canAccessContent } = useEntitlements();
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
 
@@ -68,6 +70,7 @@ export default function CheatSheets() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <Badge tone="neutral">{cs.category}</Badge>
                 <Badge tone="neutral">{cs.entryCount} entries</Badge>
+                {!canAccessContent('cheatsheet', cs.id) && <Badge tone="primary" icon="lock">Pro</Badge>}
               </div>
             </Card>
           ))}

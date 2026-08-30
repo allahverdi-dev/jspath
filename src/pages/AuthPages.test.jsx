@@ -62,6 +62,13 @@ describe('OAuth-only authentication pages', () => {
     await waitFor(() => expect(mocks.auth.signInWithGitHub).toHaveBeenCalledWith('/onboarding/level'));
   });
 
+  it('preserves a safe Pro upgrade destination through OAuth signup', async () => {
+    renderPage(<SignUp />, '/signup?next=%2Fpricing%3Fcheckout%3Dpro-annual');
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    await waitFor(() => expect(mocks.auth.signInWithGoogle).toHaveBeenCalledWith('/pricing?checkout=pro-annual'));
+  });
+
   it('keeps guest mode available when account infrastructure is unavailable', () => {
     mocks.auth.isConfigured = false;
     renderPage(<Login />, '/login');

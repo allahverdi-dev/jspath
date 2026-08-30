@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { Icon, Button, cx } from '../components/ui/index.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { SearchOverlay } from '../features/search/SearchOverlay.jsx';
 
 /**
@@ -31,6 +32,7 @@ const NAV_SECTIONS = [
       { to: '/reference', icon: 'menu_book', label: 'JS Reference' },
       { to: '/cheat-sheets', icon: 'description', label: 'Cheat Sheets' },
       { to: '/interview', icon: 'record_voice_over', label: 'Interview Prep' },
+      { to: '/pricing', icon: 'workspace_premium', label: 'Pricing' },
     ],
   },
   {
@@ -99,6 +101,7 @@ function NavItem({ item, onNavigate }) {
 function SidebarContent({ onNavigate }) {
   const { state, streak, xp } = useUserState();
   const { isAuthenticated, displayName } = useAuth();
+  const { isPro } = useEntitlements();
   const name = isAuthenticated ? displayName : state.profile.displayName || 'Guest';
 
   return (
@@ -123,6 +126,14 @@ function SidebarContent({ onNavigate }) {
       </nav>
 
       <div className="border-t border-outline-variant bg-surface-container-low p-3">
+        <Link
+          to="/pricing"
+          onClick={onNavigate}
+          className="mb-2 flex items-center justify-center gap-1.5 rounded border border-primary/30 bg-primary/5 px-3 py-2 font-body-sm font-semibold text-primary-ink transition hover:bg-primary/10"
+        >
+          <Icon name={isPro ? 'workspace_premium' : 'upgrade'} size={17} />
+          {isPro ? 'Pro · Manage plan' : 'Upgrade to Pro'}
+        </Link>
         <div className="mb-2 flex items-center justify-between px-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
           <span className="flex items-center gap-1">
             <Icon name="local_fire_department" size={13} filled className={streak > 0 ? 'text-primary' : ''} />
@@ -141,7 +152,7 @@ function SidebarContent({ onNavigate }) {
           <span className="min-w-0 flex-1">
             <span className="block truncate font-body-sm font-semibold text-on-surface">{name}</span>
             <span className="block truncate font-mono text-code-sm text-on-surface-variant">
-              {isAuthenticated ? 'Signed in' : 'Guest — progress saved locally'}
+              {isPro ? 'Pro member' : isAuthenticated ? 'Free account' : 'Guest — progress saved locally'}
             </span>
           </span>
           <Icon name="chevron_right" size={18} className="text-on-surface-variant" />

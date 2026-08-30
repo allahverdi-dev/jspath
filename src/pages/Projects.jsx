@@ -5,9 +5,13 @@ import { useUserState } from '../state/UserStateProvider.jsx';
 import { projects as allProjects } from '../content/registry.js';
 import { DIFFICULTY_ORDER } from '../content/schema/types.js';
 import { topicLabel } from '../content/topics.js';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
+import { FEATURE } from '../features/billing/plans.js';
 
 export default function Projects() {
   const { state } = useUserState();
+  const { hasFeature } = useEntitlements();
+  const projectsUnlocked = hasFeature(FEATURE.PROJECTS);
   const [difficulty, setDifficulty] = useState('all');
 
   const filtered = useMemo(
@@ -49,7 +53,10 @@ export default function Projects() {
               <Card key={p.id} as={Link} to={`/projects/${p.slug}`} interactive className="flex flex-col p-5">
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <DifficultyBadge difficulty={p.difficulty} />
-                  {record?.completedAt && <Icon name="check_circle" size={18} className="text-success" filled />}
+                  <span className="flex items-center gap-2">
+                    {!projectsUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
+                    {record?.completedAt && <Icon name="check_circle" size={18} className="text-success" filled />}
+                  </span>
                 </div>
                 <p className="font-heading text-title-md text-on-surface">{p.title}</p>
                 <p className="mt-1.5 line-clamp-3 font-body-sm text-on-surface-variant">{p.tagline}</p>
