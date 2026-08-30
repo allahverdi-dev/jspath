@@ -3,6 +3,28 @@ import * as supa from '../services/supabase.js';
 
 const AuthContext = createContext(null);
 
+const identityValue = (value) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+
+/** OAuth providers use different metadata keys, so identity reads stay defensive. */
+export function getAuthDisplayName(user) {
+  if (!user) return null;
+  const metadata = user.user_metadata ?? {};
+  return (
+    identityValue(metadata.display_name) ??
+    identityValue(metadata.full_name) ??
+    identityValue(metadata.name) ??
+    identityValue(metadata.user_name) ??
+    identityValue(metadata.preferred_username) ??
+    identityValue(user.email)?.split('@')[0] ??
+    'Learner'
+  );
+}
+
+export function getAuthAvatarUrl(user) {
+  const metadata = user?.user_metadata ?? {};
+  return identityValue(metadata.avatar_url) ?? identityValue(metadata.picture);
+}
+
 /**
  * Authentication.
  *
@@ -30,7 +52,10 @@ export function AuthProvider({ children }) {
     });
 
     const unsubscribe = supa.onAuthChange((s) => {
-      if (!cancelled) setSession(s);
+      if (!cancelled) {
+        setSession(s);
+        setLoading(false);
+      }
     });
 
     return () => {
@@ -39,13 +64,11 @@ export function AuthProvider({ children }) {
     };
   }, [configured]);
 
-  const signIn = useCallback((credentials) => supa.signIn(credentials), []);
-  const signUp = useCallback((credentials) => supa.signUp(credentials), []);
-  const signInWithGoogle = useCallback(() => supa.signInWithGoogle(), []);
-  const resetPassword = useCallback((email) => supa.resetPassword(email), []);
+  const signInWithGoogle = useCallback((redirectPath) => supa.signInWithGoogle(redirectPath), []);
+  const signInWithGitHub = useCallback((redirectPath) => supa.signInWithGitHub(redirectPath), []);
   const signOut = useCallback(async () => {
     const result = await supa.signOut();
-    setSession(null);
+    if (!result.error) setSession(null);
     return result;
   }, []);
 
@@ -58,14 +81,13 @@ export function AuthProvider({ children }) {
       session,
       user,
       isAuthenticated: Boolean(user),
-      displayName: user?.user_metadata?.display_name ?? user?.email?.split('@')[0] ?? null,
-      signIn,
-      signUp,
+      displayName: getAuthDisplayName(user),
+      avatarUrl: getAuthAvatarUrl(user),
       signInWithGoogle,
+      signInWithGitHub,
       signOut,
-      resetPassword,
     }),
-    [configured, loading, session, user, signIn, signUp, signInWithGoogle, signOut, resetPassword],
+    [configured, loading, session, user, signInWithGoogle, signInWithGitHub, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

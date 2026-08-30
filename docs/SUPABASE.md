@@ -10,11 +10,13 @@ Configure it only if you want accounts and cross-device sync.
 ```bash
 # .env — never commit this
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-The anon key is designed to be public; the row-level security below is what protects
-data.
+Newer projects should use the browser-safe publishable key. Existing deployments may
+continue to use `VITE_SUPABASE_ANON_KEY`; JSPath falls back to it when no publishable
+key is set. Never use a service-role key in the browser. Row-level security below is
+what protects learner data.
 
 ## 2. Schema
 
@@ -46,11 +48,23 @@ trade: it keeps the client simple and makes guest → account migration a single
 at the cost of not being able to query individual lesson rows server-side — which
 nothing in the product needs.
 
-## 3. Google OAuth (optional)
+## 3. OAuth providers
 
-Enable the Google provider under **Authentication → Providers**, then add your redirect
-URLs (`http://localhost:5173/dashboard` for local development). The sign-in button
-appears automatically once Supabase is configured.
+Enable Google and GitHub under **Authentication → Providers**. Create each provider's
+OAuth application as described by Supabase, and keep provider client secrets in the
+Supabase dashboard — never in this repository or a Vite environment variable.
+
+Add every application origin under **Authentication → URL Configuration**. Local
+development needs both JSPath return routes, for example:
+
+```text
+http://localhost:5173/dashboard
+http://localhost:5173/onboarding/level
+```
+
+Add the equivalent routes for each deployed origin. Login returns to `/dashboard`;
+account creation returns to `/onboarding/level`. Both providers use Supabase's normal
+identity-only OAuth flow and request no provider API scopes.
 
 ## Failure behaviour
 

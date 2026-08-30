@@ -1,23 +1,25 @@
 /**
  * Supabase integration — entirely optional.
  *
- * If `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are absent, `getSupabase()`
- * returns `null` and the whole application runs in guest mode against
- * localStorage. Nothing in the learning experience is gated on this module
- * resolving, which is what lets JSPath be reviewed and used with no backend.
+ * If the Supabase URL or browser-safe API key is absent, `getSupabase()` returns
+ * `null` and the whole application runs in guest mode against localStorage.
+ * Nothing in the learning experience is gated on this module resolving, which
+ * is what lets JSPath be reviewed and used with no backend.
  *
  * Schema and setup instructions: `docs/SUPABASE.md`.
  */
 import { createClient } from '@supabase/supabase-js';
 
 const url = import.meta.env?.VITE_SUPABASE_URL;
+const publishableKey = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY;
 const anonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
+const browserKey = publishableKey || anonKey;
 
 let client = null;
 let initialised = false;
 
 export function isSupabaseConfigured() {
-  return Boolean(url && anonKey && !url.includes('your-project'));
+  return Boolean(url && browserKey && !url.includes('your-project'));
 }
 
 export function getSupabase() {
@@ -25,7 +27,7 @@ export function getSupabase() {
   initialised = true;
   if (!isSupabaseConfigured()) return null;
   try {
-    client = createClient(url, anonKey, {
+    client = createClient(url, browserKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
   } catch (e) {
@@ -44,39 +46,37 @@ const UNCONFIGURED = {
   code: 'not-configured',
 };
 
-export async function signUp({ email, password, displayName }) {
-  const supabase = getSupabase();
-  if (!supabase) return { data: null, error: UNCONFIGURED };
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { display_name: displayName } },
-    });
-    return { data, error };
-  } catch (e) {
-    return { data: null, error: { message: e.message } };
+const OAUTH_PROVIDERS = new Set(['google', 'github']);
+
+/** Build an application-owned OAuth return URL and reject external redirects. */
+export function createOAuthRedirectUrl(redirectPath, origin = globalThis.window?.location?.origin) {
+  if (!origin || typeof redirectPath !== 'string' || !redirectPath.startsWith('/')) {
+    throw new TypeError('OAuth redirect must be an application path.');
   }
+
+  const applicationOrigin = new URL(origin).origin;
+  const redirectUrl = new URL(redirectPath, `${applicationOrigin}/`);
+  if (redirectUrl.origin !== applicationOrigin) {
+    throw new TypeError('OAuth redirect must stay on the JSPath origin.');
+  }
+  return redirectUrl.toString();
 }
 
-export async function signIn({ email, password }) {
-  const supabase = getSupabase();
-  if (!supabase) return { data: null, error: UNCONFIGURED };
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    return { data, error };
-  } catch (e) {
-    return { data: null, error: { message: e.message } };
+export async function signInWithOAuth(provider, redirectPath = '/dashboard') {
+  if (!OAUTH_PROVIDERS.has(provider)) {
+    return {
+      data: null,
+      error: { message: 'This sign-in provider is not supported.', code: 'unsupported-provider' },
+    };
   }
-}
 
-export async function signInWithGoogle() {
   const supabase = getSupabase();
   if (!supabase) return { data: null, error: UNCONFIGURED };
   try {
+    const redirectTo = createOAuthRedirectUrl(redirectPath);
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      provider,
+      options: { redirectTo },
     });
     return { data, error };
   } catch (e) {
@@ -84,17 +84,12 @@ export async function signInWithGoogle() {
   }
 }
 
-export async function resetPassword(email) {
-  const supabase = getSupabase();
-  if (!supabase) return { data: null, error: UNCONFIGURED };
-  try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
-    });
-    return { data, error };
-  } catch (e) {
-    return { data: null, error: { message: e.message } };
-  }
+export function signInWithGoogle(redirectPath = '/dashboard') {
+  return signInWithOAuth('google', redirectPath);
+}
+
+export function signInWithGitHub(redirectPath = '/dashboard') {
+  return signInWithOAuth('github', redirectPath);
 }
 
 export async function signOut() {
