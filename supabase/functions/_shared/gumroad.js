@@ -10,6 +10,26 @@ export const GUMROAD_RESOURCE_TYPES = Object.freeze([
 ]);
 
 const stringValue = (value) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+const variantValue = (sale) => {
+  const direct = stringValue(sale?.variant) ?? stringValue(sale?.tier);
+  if (direct) return direct;
+
+  const variants = sale?.variants;
+
+  if (typeof variants === 'string') {
+    return stringValue(variants);
+  }
+
+  if (variants && typeof variants === 'object' && !Array.isArray(variants)) {
+    return (
+      stringValue(variants.Tier) ??
+      Object.values(variants).map(stringValue).find(Boolean) ??
+      null
+    );
+  }
+
+  return null;
+};
 const dateValue = (...values) => values.map(stringValue).find((value) => value && !Number.isNaN(new Date(value).getTime())) ?? null;
 
 export function canonicalPayload(payload) {
@@ -50,7 +70,7 @@ export function isAllowedProduct(allowedProducts, sale) {
   if (!rule || rule.plan !== 'pro') return false;
   const allowedVariants = Array.isArray(rule.variants) ? rule.variants.filter(Boolean) : [];
   if (allowedVariants.length === 0) return true;
-  const variant = stringValue(sale?.variants) ?? stringValue(sale?.variant) ?? stringValue(sale?.tier);
+  const variant = variantValue(sale);
   return Boolean(variant && allowedVariants.includes(variant));
 }
 
@@ -88,7 +108,7 @@ export function normalizeSubscription({ eventType, sale, subscriber = {}, now = 
     provider_subscription_id: stringValue(merged.subscription_id) ?? stringValue(merged.id),
     provider_sale_id: stringValue(sale?.sale_id) ?? stringValue(sale?.id),
     provider_product_id: stringValue(sale?.product_id),
-    provider_variant: stringValue(sale?.variants) ?? stringValue(sale?.variant) ?? stringValue(sale?.tier),
+    provider_variant: variantValue(sale),
     plan: 'pro',
     status,
     billing_interval: interval(stringValue(merged.recurrence) ?? stringValue(merged.billing_interval)),
