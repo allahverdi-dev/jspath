@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './AuthProvider.jsx';
 import { loadOwnSubscriptions, reconcileOwnSubscription } from '../services/billing.js';
-import { resolveEntitlement } from '../features/billing/entitlements.js';
+import { resolveEntitlement, subscriptionNeedsReconciliation } from '../features/billing/entitlements.js';
 import { canAccessContent, planHasFeature } from '../features/billing/access.js';
 import { isBillingConfigured } from '../features/billing/plans.js';
 
@@ -12,9 +12,13 @@ export function EntitlementProvider({ children }) {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(authLoading);
   const [error, setError] = useState(null);
+  const reconciliationAttemptedUsers = useRef(new Set());
+  const reconciliationInFlight = useRef(null);
+  const loadGeneration = useRef(0);
   const billingConfigured = isBillingConfigured();
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ keepLoading = false } = {}) => {
+    const generation = ++loadGeneration.current;
     if (!isAuthenticated || !user?.id) {
       setSubscriptions([]);
       setError(null);
@@ -23,22 +27,62 @@ export function EntitlementProvider({ children }) {
     }
     setLoading(true);
     const result = await loadOwnSubscriptions(user.id);
-    setSubscriptions(result.data ?? []);
-    setError(result.error ?? null);
-    setLoading(false);
+    if (generation === loadGeneration.current) {
+      if (!result.error) setSubscriptions(result.data ?? []);
+      setError(result.error ?? null);
+      if (!keepLoading) setLoading(false);
+    }
     return result;
   }, [isAuthenticated, user?.id]);
 
-  useEffect(() => {
-    if (authLoading) return;
-    refresh();
-  }, [authLoading, refresh]);
-
   const reconcile = useCallback(async () => {
-    const result = await reconcileOwnSubscription();
-    await refresh();
-    return result;
-  }, [refresh]);
+    const userId = user?.id;
+    if (!isAuthenticated || !userId) {
+      return { data: null, error: { message: 'An authenticated account is required.' } };
+    }
+    if (reconciliationInFlight.current?.userId === userId) {
+      return reconciliationInFlight.current.promise;
+    }
+
+    reconciliationAttemptedUsers.current.add(userId);
+    const promise = (async () => {
+      let result;
+      try {
+        result = await reconcileOwnSubscription();
+      } catch (caught) {
+        result = { data: null, error: { message: caught?.message ?? 'Membership reconciliation failed.' } };
+      }
+      await refresh();
+      return result;
+    })();
+    reconciliationInFlight.current = { userId, promise };
+
+    try {
+      return await promise;
+    } finally {
+      if (reconciliationInFlight.current?.promise === promise) reconciliationInFlight.current = null;
+    }
+  }, [isAuthenticated, user?.id, refresh]);
+
+  useEffect(() => {
+    if (authLoading) return undefined;
+    let cancelled = false;
+
+    const loadEntitlements = async () => {
+      const result = await refresh({ keepLoading: true });
+      if (cancelled) return;
+
+      const needsRecovery = !result.error && result.data?.some((item) => subscriptionNeedsReconciliation(item));
+      if (needsRecovery && user?.id && !reconciliationAttemptedUsers.current.has(user.id)) {
+        await reconcile();
+      } else {
+        setLoading(false);
+      }
+    };
+
+    loadEntitlements();
+    return () => { cancelled = true; };
+  }, [authLoading, user?.id, refresh, reconcile]);
 
   const resolved = useMemo(
     () => resolveEntitlement({ authenticated: isAuthenticated, subscriptions }),

@@ -152,6 +152,14 @@ function searches the creator's Gumroad sales for that confirmed email, then app
 the same product/tier/API checks. Support should investigate genuine email mismatch
 cases rather than manually toggling browser state.
 
+The webhook remains the primary update path. On account startup, JSPath automatically
+reconciles an existing `active`, `canceling`, or `past_due` Gumroad row when its last
+provider verification is at least 24 hours old, or when its effective end boundary has
+passed. This recovery check runs at most once per signed-in user during an application
+session and never runs for Free users with no subscription row. When Gumroad provides
+no effective end date, the existing seven-day verification TTL remains a fail-safe if
+recovery stays unavailable.
+
 ## Lifecycle
 
 - **Initial sale / renewal:** verified state becomes `active`.
