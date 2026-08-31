@@ -13,7 +13,15 @@
     @apply bg-background text-on-surface font-body antialiased;
     font-size: 16px;
     overscroll-behavior-y: none;
+    overflow-wrap: anywhere;
   }
+
+  /* Let content columns shrink; code and tables scroll inside their own panels. */
+  .grid > *, .flex > :where(div, section, article, main, aside, nav, form) { min-width: 0; }
+  pre { max-width: 100%; overflow-wrap: normal; }
+  fieldset { min-width: 0; }
+  img, video, iframe { max-width: 100%; }
+  button, a, input, select, textarea { touch-action: manipulation; }
 
   :focus-visible {
     outline: 2px solid rgb(var(--c-primary));
@@ -45,6 +53,27 @@
 }
 
 @layer components {
+  .safe-page { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .app-header { height: calc(4rem + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+  .app-content { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+  .overlay-panel { max-height: calc(100vh - 2rem); max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .drawer-panel { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  .toast-stack { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+  @media (min-width: 1024px) {
+    .app-content { padding-bottom: 3rem; }
+    .toast-stack { bottom: 1rem; }
+  }
+  @media (max-width: 639px), (pointer: coarse) {
+    button:not([role="switch"]), .touch-target { min-height: 44px; min-width: 44px; }
+    label.cursor-pointer { min-height: 44px; }
+    footer nav a { display: inline-flex; align-items: center; min-height: 44px; }
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), :root select, :root textarea { font-size: 16px; }
+  }
+  @supports (min-height: 100svh) {
+    :root .min-h-screen { min-height: 100svh; }
+  }
   .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .hide-scrollbar::-webkit-scrollbar { display: none; }
 

@@ -374,7 +374,7 @@ function EventPropagation() {
             <div key={node}>
               <div
                 className={cx(
-                  'flex items-center gap-2 rounded border px-3 py-2',
+                  'flex flex-wrap items-center gap-2 rounded border px-3 py-2',
                   isTarget ? 'border-primary bg-primary/10' : 'border-outline-variant bg-surface-container',
                 )}
                 style={{ marginLeft: `${(phase === 'capture' ? i : ordered.length - 1 - i) * 16}px` }}

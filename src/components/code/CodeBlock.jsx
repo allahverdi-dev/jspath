@@ -25,7 +25,7 @@ export function HighlightedCode({ code, language = 'javascript', showLineNumbers
   const gutterWidth = String(lines.length).length;
 
   return (
-    <pre className={cx('thin-scrollbar overflow-x-auto font-mono text-code-md leading-[1.6]', className)}>
+    <pre tabIndex={0} aria-label="Code sample" className={cx('thin-scrollbar min-w-0 max-w-full overflow-x-auto font-mono text-code-md leading-[1.6]', className)}>
       <code className="block">
         {lines.map((tokens, i) => (
           <span
@@ -108,8 +108,8 @@ export function CodeBlock({
   }, [code]);
 
   return (
-    <figure className={cx('overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest', className)}>
-      <div className="flex items-center gap-2 border-b border-outline-variant bg-surface-container-low px-3 py-2">
+    <figure className={cx('min-w-0 max-w-full overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest', className)}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant bg-surface-container-low px-3 py-2">
         <span className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
           {language === 'html' ? 'HTML' : language === 'text' ? 'OUTPUT' : 'JAVASCRIPT'}
         </span>
@@ -117,7 +117,7 @@ export function CodeBlock({
           <span className="font-mono text-code-sm text-primary-ink">edited</span>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex max-w-full flex-wrap items-center gap-1">
           {runnable && (
             <>
               <button
@@ -166,6 +166,8 @@ export function CodeBlock({
           value={source}
           onChange={(e) => setSource(e.target.value)}
           spellCheck="false"
+          autoCapitalize="off"
+          autoCorrect="off"
           aria-label="Editable code sample"
           className="thin-scrollbar block w-full resize-y bg-surface-container-lowest px-4 py-3 font-mono text-code-md leading-[1.6] text-on-surface outline-none"
           rows={Math.min(24, source.split('\n').length + 1)}

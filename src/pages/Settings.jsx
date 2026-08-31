@@ -174,7 +174,7 @@ export default function Settings() {
         title="Reset all progress?"
         description="This permanently deletes every lesson, exercise, quiz, challenge and project record stored in this browser."
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirmReset(false)}>Cancel</Button>
             <Button
               variant="danger"

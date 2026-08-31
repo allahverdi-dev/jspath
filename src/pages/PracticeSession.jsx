@@ -60,7 +60,7 @@ export default function PracticeSession() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface/90 backdrop-blur-xl">
+      <header className="safe-top sticky top-0 z-30 border-b border-outline-variant bg-surface/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-3 px-4">
           <button type="button" onClick={() => navigate('/practice')} className="flex items-center gap-1.5 font-body-sm text-on-surface-variant transition hover:text-on-surface">
             <Icon name="close" size={18} /> Exit

@@ -79,10 +79,10 @@ export default function Playground() {
             interrupted rather than freezing the page.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={run} loading={running} icon="play_arrow">{running ? 'Running' : 'Run'}</Button>
-          <Button variant="secondary" onClick={copy} icon="content_copy">Copy</Button>
-          <Button variant="ghost" onClick={() => { setCode(STARTER); setResult(null); }} icon="restart_alt">Reset</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={run} loading={running} icon="play_arrow">{running ? 'Running' : 'Run'}</Button>
+          <Button size="sm" variant="secondary" onClick={copy} icon="content_copy">Copy</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setCode(STARTER); setResult(null); }} icon="restart_alt">Reset</Button>
         </div>
       </div>
 

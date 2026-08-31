@@ -120,7 +120,7 @@ export default function Placement() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="safe-page safe-top safe-bottom min-h-screen bg-background">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <header className="flex items-center px-4 py-6 lg:px-8">
         <Link to="/"><Logo /></Link>

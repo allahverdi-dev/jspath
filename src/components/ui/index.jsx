@@ -1,6 +1,7 @@
-import { forwardRef, useEffect, useId, useRef, useState, createContext, useContext } from 'react';
+import { forwardRef, useId, useRef, useState, createContext, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from './Icon.jsx';
+import { useModalFocus } from '../../hooks/useModalFocus.js';
 
 export { Icon };
 
@@ -20,9 +21,9 @@ const BUTTON_VARIANTS = {
 };
 
 const BUTTON_SIZES = {
-  sm: 'h-8 px-3 text-body-sm gap-1.5',
-  md: 'h-10 px-4 text-body-sm gap-2',
-  lg: 'h-12 px-6 text-body-md gap-2',
+  sm: 'min-h-8 px-3 py-1.5 text-body-sm gap-1.5',
+  md: 'min-h-10 px-4 py-2 text-body-sm gap-2',
+  lg: 'min-h-12 px-6 py-3 text-body-md gap-2',
   icon: 'h-9 w-9 justify-center',
 };
 
@@ -31,7 +32,7 @@ export const Button = forwardRef(function Button(
   ref,
 ) {
   const classes = cx(
-    'inline-flex items-center justify-center rounded font-body transition-colors',
+    'touch-target inline-flex max-w-full items-center justify-center break-normal rounded text-center font-body transition-colors',
     'disabled:cursor-not-allowed disabled:opacity-50',
     BUTTON_VARIANTS[variant] ?? BUTTON_VARIANTS.primary,
     BUTTON_SIZES[size] ?? BUTTON_SIZES.md,
@@ -76,7 +77,7 @@ export function Card({ as: Tag = 'div', className = '', interactive = false, chi
   return (
     <Tag
       className={cx(
-        'rounded-lg border border-outline-variant bg-surface-container-low',
+        'min-w-0 max-w-full rounded-lg border border-outline-variant bg-surface-container-low',
         interactive && 'transition-colors hover:border-outline hover:bg-surface-container',
         className,
       )}
@@ -89,7 +90,7 @@ export function Card({ as: Tag = 'div', className = '', interactive = false, chi
 
 export function CardHeader({ title, description, action, icon, className = '' }) {
   return (
-    <div className={cx('flex items-start justify-between gap-4', className)}>
+    <div className={cx('flex flex-wrap items-start justify-between gap-4', className)}>
       <div className="min-w-0">
         <h3 className="flex items-center gap-2 font-heading text-title-md text-on-surface">
           {icon && <Icon name={icon} size={18} className="text-on-surface-variant" />}
@@ -119,7 +120,7 @@ export function Badge({ tone = 'neutral', className = '', icon, children, ...res
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1 rounded border px-2 py-0.5',
+        'inline-flex max-w-full items-center gap-1 rounded border px-2 py-0.5',
         'font-mono text-label-caps uppercase tracking-wider',
         BADGE_TONES[tone] ?? BADGE_TONES.neutral,
         className,
@@ -277,7 +278,7 @@ export const Input = forwardRef(function Input(
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={describedBy}
           className={cx(
-            'h-10 w-full rounded border bg-surface px-3 font-body-sm text-on-surface',
+            'min-h-11 min-w-0 w-full rounded border bg-surface px-3 py-2 font-body-sm text-on-surface',
             'placeholder:text-on-surface-variant/70',
             'focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
             icon && 'pl-9',
@@ -315,7 +316,7 @@ export function Select({ label, className = '', id: providedId, children, hint, 
       <select
         id={id}
         className={cx(
-          'h-10 w-full rounded border border-outline-variant bg-surface px-3 font-body-sm text-on-surface',
+          'min-h-11 min-w-0 w-full rounded border border-outline-variant bg-surface px-3 py-2 font-body-sm text-on-surface',
           'focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
           className,
         )}
@@ -346,17 +347,16 @@ export function Toggle({ checked, onChange, label, description, id: providedId, 
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={cx(
-          'relative h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50',
-          checked ? 'border-primary bg-primary' : 'border-outline-variant bg-surface-container-highest',
-        )}
+        className="relative flex h-11 w-11 shrink-0 items-center rounded disabled:opacity-50"
       >
-        <span
-          className={cx(
-            'absolute top-0.5 h-4 w-4 rounded-full transition-transform',
-            checked ? 'translate-x-6 bg-on-primary' : 'translate-x-1 bg-on-surface-variant',
-          )}
-        />
+        <span aria-hidden="true" className={cx('relative h-6 w-11 rounded-full border transition-colors', checked ? 'border-primary bg-primary' : 'border-outline-variant bg-surface-container-highest')}>
+          <span
+            className={cx(
+              'absolute left-0 top-0.5 h-4 w-4 rounded-full transition-transform',
+              checked ? 'translate-x-6 bg-on-primary' : 'translate-x-1 bg-on-surface-variant',
+            )}
+          />
+        </span>
       </button>
     </div>
   );
@@ -386,7 +386,7 @@ export function Tabs({ tabs, value, onChange, className = '', size = 'md' }) {
     <div
       role="tablist"
       onKeyDown={onKeyDown}
-      className={cx('flex items-center gap-1 overflow-x-auto hide-scrollbar', className)}
+      className={cx('thin-scrollbar flex min-w-0 max-w-full items-center gap-1 overflow-x-auto pb-1', className)}
     >
       {tabs.map((tab, i) => {
         const active = tab.value === value;
@@ -423,48 +423,7 @@ export function Tabs({ tabs, value, onChange, className = '', size = 'md' }) {
 export function Dialog({ open, onClose, title, description, children, footer, size = 'md' }) {
   const panelRef = useRef(null);
   const titleId = useId();
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const previouslyFocused = document.activeElement;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = 'hidden';
-
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const focusables = panelRef.current?.querySelectorAll(
-        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusables?.length) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown, true);
-    // Move focus into the dialog once it has painted.
-    requestAnimationFrame(() => {
-      const target = panelRef.current?.querySelector('[data-autofocus]') ?? panelRef.current;
-      target?.focus();
-    });
-
-    return () => {
-      document.removeEventListener('keydown', onKeyDown, true);
-      document.body.style.overflow = overflow;
-      previouslyFocused?.focus?.();
-    };
-  }, [open, onClose]);
+  useModalFocus(open, panelRef, onClose);
 
   if (!open) return null;
 
@@ -484,13 +443,13 @@ export function Dialog({ open, onClose, title, description, children, footer, si
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         className={cx(
-          'relative z-10 max-h-[85vh] w-full overflow-hidden rounded-lg border border-outline-variant',
+          'overlay-panel relative z-10 flex min-w-0 w-full flex-col overflow-hidden rounded-lg border border-outline-variant',
           'bg-surface-container-high shadow-2xl animate-slide-up focus:outline-none',
           widths[size],
         )}
       >
         {title && (
-          <div className="flex items-start justify-between gap-4 border-b border-outline-variant px-6 py-4">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant px-4 py-3 sm:px-6 sm:py-4">
             <div>
               <h2 id={titleId} className="font-heading text-title-md text-on-surface">{title}</h2>
               {description && <p className="mt-1 font-body-sm text-on-surface-variant">{description}</p>}
@@ -505,8 +464,8 @@ export function Dialog({ open, onClose, title, description, children, footer, si
             </button>
           </div>
         )}
-        <div className="thin-scrollbar max-h-[60vh] overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="border-t border-outline-variant px-6 py-4">{footer}</div>}
+        <div className="thin-scrollbar min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+        {footer && <div className="shrink-0 border-t border-outline-variant px-4 py-3 sm:px-6 sm:py-4">{footer}</div>}
       </div>
     </div>
   );
@@ -560,7 +519,7 @@ export function PageHeader({ title, description, actions, breadcrumbs, className
           <h1 className="font-display text-display-lg text-on-surface">{title}</h1>
           {description && <p className="mt-2 max-w-2xl font-body-lg text-on-surface-variant">{description}</p>}
         </div>
-        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+        {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </div>
   );

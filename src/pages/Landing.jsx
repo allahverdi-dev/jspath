@@ -29,18 +29,29 @@ const SAMPLE = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="safe-page safe-bottom min-h-screen bg-background">
       <a href="#main-content" className="skip-link">Skip to main content</a>
 
-      <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface/85 backdrop-blur-xl">
+      <header className="safe-top sticky top-0 z-30 border-b border-outline-variant bg-surface/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-container-max items-center px-4 lg:px-8">
           <Link to="/"><Logo /></Link>
-          <nav className="ml-auto flex items-center gap-2">
+          <nav aria-label="Main" className="ml-auto hidden items-center gap-2 sm:flex">
             <Button to="/curriculum" variant="ghost" size="sm">Curriculum</Button>
             <Button to="/pricing" variant="ghost" size="sm">Pricing</Button>
             <Button to="/login" variant="secondary" size="sm">Log in</Button>
             <Button to="/dashboard" size="sm">Start learning</Button>
           </nav>
+          <details className="relative ml-auto sm:hidden">
+            <summary className="touch-target flex cursor-pointer list-none items-center gap-2 rounded border border-outline-variant px-3 py-2 font-body-sm">
+              <Icon name="menu" size={20} /> Menu
+            </summary>
+            <nav aria-label="Mobile main" className="absolute right-0 top-full mt-2 grid w-56 max-w-[calc(100vw-2rem)] gap-2 rounded-lg border border-outline-variant bg-surface p-3 shadow-xl">
+              <Button to="/curriculum" variant="ghost">Curriculum</Button>
+              <Button to="/pricing" variant="ghost">Pricing</Button>
+              <Button to="/login" variant="secondary">Log in</Button>
+              <Button to="/dashboard">Start learning</Button>
+            </nav>
+          </details>
         </div>
       </header>
 

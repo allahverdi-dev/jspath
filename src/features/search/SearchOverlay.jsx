@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { search, groupResults, KIND_LABEL } from './searchIndex.js';
 import { Icon, Badge, cx } from '../../components/ui/index.jsx';
 import { contentStats } from '../../content/registry.js';
+import { useModalFocus } from '../../hooks/useModalFocus.js';
 
 const QUICK_LINKS = [
   { label: 'Curriculum', to: '/curriculum', icon: 'school' },
@@ -24,6 +25,8 @@ export function SearchOverlay({ open, onClose }) {
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const panelRef = useRef(null);
+  useModalFocus(open, panelRef, onClose, inputRef);
   const navigate = useNavigate();
 
   const results = useMemo(() => (query.trim().length >= 2 ? search(query, { limit: 24 }) : []), [query]);
@@ -34,18 +37,10 @@ export function SearchOverlay({ open, onClose }) {
     if (open) {
       setQuery('');
       setActive(0);
-      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
 
   useEffect(() => setActive(0), [query]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = overflow; };
-  }, [open]);
 
   useEffect(() => {
     listRef.current
@@ -79,16 +74,18 @@ export function SearchOverlay({ open, onClose }) {
   let cursor = -1;
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-start justify-center p-4 pt-[10vh]">
+    <div className="fixed inset-0 z-[95] flex items-start justify-center p-3 sm:p-4 sm:pt-[5dvh]">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm animate-fade-in" onClick={onClose} aria-hidden="true" />
 
       <div
-        className="relative z-10 flex max-h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-2xl animate-slide-up"
+        ref={panelRef}
+        tabIndex={-1}
+        className="overlay-panel relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-2xl animate-slide-up sm:max-h-[85dvh]"
         role="dialog"
         aria-modal="true"
         aria-label="Search JSPath"
       >
-        <div className="flex items-center gap-3 border-b border-outline-variant px-4">
+        <div className="flex shrink-0 items-center gap-2 border-b border-outline-variant px-3 sm:px-4">
           <Icon name="search" size={20} className="text-on-surface-variant" />
           <input
             ref={inputRef}
@@ -96,7 +93,8 @@ export function SearchOverlay({ open, onClose }) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Search lessons, methods, challenges, interview questions…"
-            className="h-14 flex-1 bg-transparent font-body-md text-on-surface outline-none placeholder:text-on-surface-variant/70"
+            className="h-14 min-w-0 flex-1 bg-transparent font-body-md text-on-surface outline-none placeholder:text-on-surface-variant/70"
+            aria-label="Search content"
             role="combobox"
             aria-expanded="true"
             aria-controls="search-results"
@@ -107,9 +105,12 @@ export function SearchOverlay({ open, onClose }) {
           <kbd className="hidden rounded border border-outline-variant px-1.5 py-0.5 font-mono text-code-sm text-on-surface-variant sm:inline">
             ESC
           </kbd>
+          <button type="button" onClick={onClose} aria-label="Close search" className="flex shrink-0 items-center justify-center rounded p-2 text-on-surface-variant hover:bg-surface-container">
+            <Icon name="close" size={20} />
+          </button>
         </div>
 
-        <div ref={listRef} id="search-results" role="listbox" className="thin-scrollbar flex-1 overflow-y-auto p-2">
+        <div ref={listRef} id="search-results" role="listbox" className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
           {query.trim().length < 2 ? (
             <div className="p-2">
               <p className="px-2 pb-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
@@ -167,12 +168,12 @@ export function SearchOverlay({ open, onClose }) {
                     >
                       <Icon name={item.icon} size={18} className="mt-0.5 text-on-surface-variant" />
                       <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
+                        <span className="flex flex-wrap items-center gap-2">
                           <span className="truncate font-body-sm font-medium text-on-surface">{item.title}</span>
                           {item.difficulty && <Badge tone="neutral">{item.difficulty}</Badge>}
                         </span>
                         {item.description && (
-                          <span className="mt-0.5 block line-clamp-1 font-body-sm text-on-surface-variant">
+                          <span className="mt-0.5 line-clamp-2 font-body-sm text-on-surface-variant">
                             {item.description}
                           </span>
                         )}
@@ -186,7 +187,7 @@ export function SearchOverlay({ open, onClose }) {
           )}
         </div>
 
-        <div className="flex items-center gap-4 border-t border-outline-variant px-4 py-2 font-mono text-code-sm text-on-surface-variant">
+        <div className="hidden shrink-0 items-center gap-4 border-t border-outline-variant px-4 py-2 font-mono text-code-sm text-on-surface-variant sm:flex">
           <span className="flex items-center gap-1"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
           <span className="flex items-center gap-1"><kbd>↵</kbd> open</span>
           <span className="ml-auto">{flat.length > 0 && `${flat.length} result${flat.length === 1 ? '' : 's'}`}</span>

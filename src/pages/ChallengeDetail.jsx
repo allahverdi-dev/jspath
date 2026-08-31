@@ -132,10 +132,10 @@ export default function ChallengeDetail() {
 
         <div>
           <CodeEditor value={code} onChange={setCode} onRun={run} height={420} ariaLabel={`Solution editor for ${challenge.title}`} />
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button onClick={run} loading={running} icon="play_arrow">{running ? 'Running' : 'Run tests'}</Button>
             <Button variant="ghost" onClick={() => { setCode(challenge.starterCode); setResult(null); }} icon="restart_alt">Reset</Button>
-            <span className="ml-auto font-mono text-code-sm text-on-surface-variant">Ctrl/⌘ + Enter</span>
+            <span className="ml-auto hidden font-mono text-code-sm text-on-surface-variant sm:inline">Ctrl/⌘ + Enter</span>
           </div>
 
           {result && (

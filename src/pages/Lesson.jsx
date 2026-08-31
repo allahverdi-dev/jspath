@@ -131,9 +131,9 @@ export default function Lesson() {
   return (
     <div className="min-h-screen bg-background">
       {/* Lesson header bar — replaces the app shell for focused reading */}
-      <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 w-full max-w-container-max items-center gap-3 px-4 lg:px-8">
-          <Link to="/curriculum" className="flex items-center gap-2 text-on-surface-variant transition hover:text-on-surface">
+      <header className="safe-top sticky top-0 z-30 border-b border-outline-variant bg-surface/90 backdrop-blur-xl">
+        <div className="mx-auto flex min-h-14 w-full max-w-container-max flex-wrap items-center gap-2 px-4 py-1 lg:px-8">
+          <Link to="/curriculum" aria-label="Back to curriculum" className="touch-target flex items-center gap-2 text-on-surface-variant transition hover:text-on-surface">
             <Icon name="arrow_back" size={18} />
             <span className="hidden font-body-sm sm:inline">Curriculum</span>
           </Link>

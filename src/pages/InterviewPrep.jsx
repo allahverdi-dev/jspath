@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, Button, Icon, Badge, Tabs, EmptyState, Input, SectionLabel, ProgressBar } from '../components/ui/index.jsx';
+import { Card, Button, Icon, Badge, Tabs, EmptyState, Input, Select, SectionLabel, ProgressBar } from '../components/ui/index.jsx';
 import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
 import { interviewQuestions, contentIndex } from '../content/registry.js';
@@ -58,8 +58,16 @@ export default function InterviewPrep() {
           <div className="mb-4 space-y-3">
             <Input icon="search" placeholder="Search questions…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search interview questions" />
             <Tabs tabs={[{ value: 'all', label: 'All levels' }, ...LEVELS.map((l) => ({ value: l, label: l }))]} value={level} onChange={setLevel} />
-            <Tabs tabs={[{ value: 'all', label: 'All topics' }, ...topics.map((t) => ({ value: t, label: t }))]} value={topic} onChange={setTopic} size="sm" />
-            <Tabs tabs={[{ value: 'all', label: 'All types' }, ...kinds.map((k) => ({ value: k, label: INTERVIEW_KIND_LABEL[k] ?? k }))]} value={kind} onChange={setKind} size="sm" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Select label="Topic" value={topic} onChange={(e) => setTopic(e.target.value)}>
+                <option value="all">All topics</option>
+                {topics.map((t) => <option key={t} value={t}>{t}</option>)}
+              </Select>
+              <Select label="Question type" value={kind} onChange={(e) => setKind(e.target.value)}>
+                <option value="all">All types</option>
+                {kinds.map((k) => <option key={k} value={k}>{INTERVIEW_KIND_LABEL[k] ?? k}</option>)}
+              </Select>
+            </div>
           </div>
 
           <p className="mb-3 font-body-sm text-on-surface-variant">{filtered.length} question{filtered.length === 1 ? '' : 's'}</p>

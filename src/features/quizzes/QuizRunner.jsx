@@ -254,7 +254,7 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
         </div>
       )}
 
-      <div className="mt-5 flex items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         {!isRevealed ? (
           <Button
             onClick={check}

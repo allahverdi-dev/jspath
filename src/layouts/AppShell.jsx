@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { Icon, Button, cx } from '../components/ui/index.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { SearchOverlay } from '../features/search/SearchOverlay.jsx';
+import { useModalFocus } from '../hooks/useModalFocus.js';
 
 /**
  * The application shell from the Stitch dashboard screen: a fixed 280px sidebar,
@@ -73,7 +74,7 @@ function NavItem({ item, onNavigate }) {
       onClick={onNavigate}
       className={({ isActive }) =>
         cx(
-          'group relative flex items-center gap-3 rounded px-3 py-2 font-body-sm transition-colors',
+          'touch-target group relative flex items-center gap-3 rounded px-3 py-2 font-body-sm transition-colors',
           isActive
             ? 'bg-surface-container-high font-semibold text-on-surface'
             : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface',
@@ -98,7 +99,7 @@ function NavItem({ item, onNavigate }) {
   );
 }
 
-function SidebarContent({ onNavigate }) {
+function SidebarContent({ onNavigate, onClose }) {
   const { state, streak, xp } = useUserState();
   const { isAuthenticated, displayName } = useAuth();
   const { isPro } = useEntitlements();
@@ -106,13 +107,14 @@ function SidebarContent({ onNavigate }) {
 
   return (
     <>
-      <div className="flex h-16 items-center px-5">
+      <div className="flex h-16 shrink-0 items-center justify-between px-5">
         <Link to="/dashboard" onClick={onNavigate} className="rounded">
           <Logo />
         </Link>
+        {onClose && <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close navigation menu" icon="close" />}
       </div>
 
-      <nav className="thin-scrollbar flex-1 space-y-6 overflow-y-auto px-3 py-4" aria-label="Main">
+      <nav className="thin-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 py-4" aria-label="Main">
         {NAV_SECTIONS.map((section) => (
           <div key={section.label} className="space-y-0.5">
             <p className="px-3 pb-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
@@ -166,6 +168,15 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+  const drawerRef = useRef(null);
+  useModalFocus(drawerOpen, drawerRef, () => setDrawerOpen(false));
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop = () => { if (desktop.matches) setDrawerOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
+  }, []);
 
   /* Close the mobile drawer whenever navigation happens. */
   useEffect(() => setDrawerOpen(false), [location.pathname]);
@@ -175,6 +186,7 @@ export function AppShell() {
     const onKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
+        setDrawerOpen(false);
         setSearchOpen((o) => !o);
       }
     };
@@ -183,7 +195,7 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="safe-page min-h-screen bg-background">
       <a href="#main-content" className="skip-link">Skip to main content</a>
 
       {/* Desktop sidebar */}
@@ -200,23 +212,26 @@ export function AppShell() {
             aria-hidden="true"
           />
           <aside
-            className="absolute inset-y-0 left-0 flex w-[min(20rem,85vw)] flex-col border-r border-outline-variant bg-surface-container-lowest"
+            ref={drawerRef}
+            tabIndex={-1}
+            className="drawer-panel absolute inset-y-0 left-0 flex w-[min(20rem,90vw)] flex-col border-r border-outline-variant bg-surface-container-lowest"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
           >
-            <SidebarContent onNavigate={() => setDrawerOpen(false)} />
+            <SidebarContent onNavigate={() => setDrawerOpen(false)} onClose={() => setDrawerOpen(false)} />
           </aside>
         </div>
       )}
 
       <div className="lg:pl-sidebar-width">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-outline-variant bg-surface/85 px-4 backdrop-blur-xl lg:px-8">
+        <header className="app-header sticky top-0 z-30 flex items-center gap-3 border-b border-outline-variant bg-surface/85 px-4 backdrop-blur-xl lg:px-8">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="-ml-2 rounded p-2 text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface lg:hidden"
             aria-label="Open navigation menu"
+            aria-expanded={drawerOpen}
           >
             <Icon name="menu" size={22} />
           </button>
@@ -228,6 +243,7 @@ export function AppShell() {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
+            aria-label="Search JSPath"
             className="ml-auto flex items-center gap-2 rounded border border-outline-variant bg-surface-container px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface lg:ml-0 lg:w-96"
           >
             <Icon name="search" size={18} />
@@ -252,7 +268,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main id="main-content" className="min-h-[calc(100vh-4rem)] px-4 pb-24 pt-6 lg:px-8 lg:pb-12 lg:pt-8">
+        <main id="main-content" className="app-content min-w-0 min-h-[calc(100svh-4rem)] px-4 pt-6 lg:px-8 lg:pt-8">
           <div className="mx-auto w-full max-w-container-max">
             <Outlet />
           </div>
@@ -261,7 +277,7 @@ export function AppShell() {
 
       {/* Mobile tab bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-outline-variant bg-surface-container-lowest/95 backdrop-blur-xl lg:hidden"
+        className="safe-page safe-bottom fixed inset-x-0 bottom-0 z-30 flex border-t border-outline-variant bg-surface-container-lowest/95 backdrop-blur-xl lg:hidden"
         aria-label="Primary"
       >
         {MOBILE_NAV.map((item) => (
@@ -293,7 +309,7 @@ export function AppShell() {
 /** Distraction-free layout used by the lesson reader and interview sessions. */
 export function FocusLayout() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="safe-page safe-bottom min-h-screen bg-background">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <Outlet />
     </div>
