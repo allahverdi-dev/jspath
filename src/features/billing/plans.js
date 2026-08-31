@@ -20,6 +20,8 @@ export const FEATURE = Object.freeze({
 const GUEST_FEATURES = [
   FEATURE.CURRICULUM_BROWSE,
   FEATURE.CORE_LEARNING,
+  FEATURE.FULL_CURRICULUM,
+  FEATURE.PREMIUM_REFERENCE,
   FEATURE.BASIC_EXERCISES,
   FEATURE.PLAYGROUND,
   FEATURE.LOCAL_PROGRESS,
@@ -40,8 +42,8 @@ export const PLAN_FEATURES = Object.freeze({
 
 export const PLAN_DEFINITIONS = Object.freeze({
   guest: { id: 'guest', name: 'Guest', description: 'Learn locally without an account.' },
-  free: { id: 'free', name: 'Free', description: 'An account with cloud progress sync.' },
-  pro: { id: 'pro', name: 'Pro', description: 'The complete JSPath learning and practice experience.' },
+  free: { id: 'free', name: 'Free', description: 'The complete JavaScript curriculum, with cloud progress sync.' },
+  pro: { id: 'pro', name: 'Pro', description: 'Deeper practice, projects, interview preparation and mastery insights.' },
 });
 
 const monthlyUrl = import.meta.env?.VITE_GUMROAD_PRO_MONTHLY_URL ?? '';

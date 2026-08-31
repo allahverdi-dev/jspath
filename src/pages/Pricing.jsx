@@ -7,17 +7,26 @@ import {
   CHECKOUT_OPTIONS, GUMROAD_MANAGE_URL, PLAN_DEFINITIONS, createCheckoutUrl, createUpgradeAuthPath, getCheckoutOption,
 } from '../features/billing/plans.js';
 import { subscriptionGrantsPro } from '../features/billing/entitlements.js';
+import { CONTENT_ALLOCATION as allocation } from '../features/billing/contentAllocation.js';
 
 const PRO_BENEFITS = [
-  'All coding challenges and guided projects',
-  'Complete Interview Prep and premium practice sessions',
-  'Full curriculum, exercise, and premium reference access as content is tagged',
-  'Every Free feature, including cloud progress sync',
+  'Everything in Free, plus:',
+  `All ${allocation.exercise.total} exercises`,
+  `All ${allocation.challenge.total} coding challenges`,
+  `All ${allocation.project.total} guided projects`,
+  `All ${allocation.interview.total} interview questions`,
+  'Interview Practice Sessions and Guided Practice Sessions',
+  'Advanced Analytics: topic mastery, weak areas and assessment evidence',
 ];
 
 const FREE_BENEFITS = [
-  'Core curriculum browsing and learning content',
-  'Basic exercises and the JavaScript playground',
+  `Complete ${allocation.module.free}-module JavaScript curriculum · all ${allocation.lesson.free} lessons`,
+  `${allocation.exercise.free} exercises`,
+  `${allocation.challenge.free} coding challenges`,
+  `${allocation.project.free} guided projects`,
+  `${allocation.interview.free} interview questions`,
+  `All ${allocation.reference.free} reference entries and all ${allocation.cheatsheet.free} cheat sheets`,
+  'JavaScript playground and basic progress tracking',
   'Cloud progress sync with a free account',
   'Bookmarks and achievements',
 ];
@@ -92,7 +101,7 @@ export default function Pricing() {
     <div className="mx-auto max-w-5xl animate-fade-in">
       <div className="text-center">
         <Badge tone="primary">Simple plans</Badge>
-        <h1 className="mt-4 font-display text-display-lg text-on-surface">Learn free. Go deeper with Pro.</h1>
+        <h1 className="mt-4 font-display text-display-lg text-on-surface">Learn JavaScript for free. Go Pro when you want to master it.</h1>
         <p className="mx-auto mt-3 max-w-2xl font-body-lg text-on-surface-variant">
           Your account and learning progress are always yours. A plan change controls access only—it never deletes progress.
         </p>

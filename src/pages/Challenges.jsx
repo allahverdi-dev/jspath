@@ -5,13 +5,10 @@ import { useUserState } from '../state/UserStateProvider.jsx';
 import { challenges as allChallenges, contentIndex } from '../content/registry.js';
 import { dailyChallenge } from '../features/progress/recommendations.js';
 import { DIFFICULTY_ORDER } from '../content/schema/types.js';
-import { useEntitlements } from '../state/EntitlementProvider.jsx';
-import { FEATURE } from '../features/billing/plans.js';
+import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
 
 export default function Challenges() {
   const { state } = useUserState();
-  const { hasFeature } = useEntitlements();
-  const challengesUnlocked = hasFeature(FEATURE.CHALLENGES);
   const [difficulty, setDifficulty] = useState('all');
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
@@ -51,6 +48,7 @@ export default function Challenges() {
             <SectionLabel>Today’s challenge</SectionLabel>
             <p className="mt-1 font-heading text-title-md text-on-surface">{daily.title}</p>
           </div>
+          <ContentAccessBadge kind="challenge" id={daily.id} />
           <Button to={`/challenges/${daily.slug}`} iconRight="arrow_forward">Start</Button>
         </Card>
       )}
@@ -85,7 +83,7 @@ export default function Challenges() {
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <DifficultyBadge difficulty={c.difficulty} />
                   <span className="flex items-center gap-2">
-                    {!challengesUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
+                    <ContentAccessBadge kind="challenge" id={c.id} />
                     {record?.solved && <Icon name="check_circle" size={18} className="text-success" filled />}
                   </span>
                 </div>

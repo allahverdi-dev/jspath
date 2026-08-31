@@ -6,7 +6,7 @@ import { PageSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary.jsx';
 import { ContentGate, FeatureGate } from '../components/billing/FeatureGate.jsx';
 import { FEATURE } from '../features/billing/plans.js';
-import { cheatSheetBySlug, exerciseById, lessonBySlug, moduleBySlug, referenceBySlug } from '../content/registry.js';
+import { challengeBySlug, projectBySlug, interviewById, cheatSheetBySlug, exerciseById, lessonBySlug, moduleBySlug, referenceBySlug } from '../content/registry.js';
 
 /* Every page is code-split. The shell paints immediately; the route streams in. */
 const Landing = lazy(() => import('../pages/Landing.jsx'));
@@ -88,12 +88,12 @@ export function AppRouter() {
         <Route path="/practice" element={<Page element={<PracticeHub />} />} />
         <Route path="/practice/exercise/:exerciseId" element={<ContentRouteGate kind="exercise" param="exerciseId" index={exerciseById} title="This exercise is included with Pro" backTo="/practice"><Page element={<ExercisePage />} /></ContentRouteGate>} />
         <Route path="/challenges" element={<Page element={<Challenges />} />} />
-        <Route path="/challenges/:slug" element={<FeatureGate feature={FEATURE.CHALLENGES} title="Coding challenges are included with Pro" backTo="/challenges"><Page element={<ChallengeDetail />} /></FeatureGate>} />
+        <Route path="/challenges/:slug" element={<ContentRouteGate kind="challenge" param="slug" index={challengeBySlug} title="This coding challenge is included with Pro" backTo="/challenges"><Page element={<ChallengeDetail />} /></ContentRouteGate>} />
         <Route path="/projects" element={<Page element={<Projects />} />} />
-        <Route path="/projects/:slug" element={<FeatureGate feature={FEATURE.PROJECTS} title="Guided projects are included with Pro" backTo="/projects"><Page element={<ProjectDetail />} /></FeatureGate>} />
+        <Route path="/projects/:slug" element={<ContentRouteGate kind="project" param="slug" index={projectBySlug} title="This guided project is included with Pro" backTo="/projects"><Page element={<ProjectDetail />} /></ContentRouteGate>} />
         <Route path="/playground" element={<Page element={<Playground />} />} />
         <Route path="/interview" element={<Page element={<InterviewPrep />} />} />
-        <Route path="/interview/question/:questionId" element={<FeatureGate feature={FEATURE.INTERVIEW_PRO} title="Complete Interview Prep is included with Pro" backTo="/interview"><Page element={<InterviewQuestionPage />} /></FeatureGate>} />
+        <Route path="/interview/question/:questionId" element={<ContentRouteGate kind="interview" param="questionId" index={interviewById} title="This interview question is included with Pro" backTo="/interview"><Page element={<InterviewQuestionPage />} /></ContentRouteGate>} />
         <Route path="/reference" element={<Page element={<Reference />} />} />
         <Route path="/reference/:slug" element={<ContentRouteGate kind="reference" param="slug" index={referenceBySlug} title="This reference section is included with Pro" backTo="/reference"><Page element={<ReferenceDetail />} /></ContentRouteGate>} />
         <Route path="/cheat-sheets" element={<Page element={<CheatSheets />} />} />

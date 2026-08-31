@@ -96,12 +96,12 @@ export function EntitlementProvider({ children }) {
     subscriptions,
     refresh,
     reconcile,
-    hasFeature: (feature) => !billingConfigured || planHasFeature(resolved.plan, feature),
+    // Checkout availability is not an entitlement and must never bypass access.
+    hasFeature: (feature) => planHasFeature(resolved.plan, feature),
     canAccessContent: (kind, id) => canAccessContent({
       kind,
       id,
       plan: resolved.plan,
-      enforcePaidAccess: billingConfigured,
     }),
   }), [resolved, authLoading, loading, error, billingConfigured, subscriptions, refresh, reconcile]);
 

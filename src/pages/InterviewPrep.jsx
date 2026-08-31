@@ -8,6 +8,8 @@ import { weakTopics } from '../features/mastery/masteryEngine.js';
 import { INTERVIEW_LEVELS, INTERVIEW_KIND_LABEL } from '../content/schema/types.js';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { FEATURE } from '../features/billing/plans.js';
+import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
+import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGate.jsx';
 
 const LEVELS = INTERVIEW_LEVELS;
 
@@ -27,7 +29,7 @@ export default function InterviewPrep() {
   const filtered = useMemo(
     () => interviewQuestions.filter((q) => {
       const s = query.trim().toLowerCase();
-      if (s && !`${q.question} ${q.shortAnswer}`.toLowerCase().includes(s)) return false;
+      if (s && !`${q.question} ${q.topic} ${q.kind}`.toLowerCase().includes(s)) return false;
       if (level !== 'all' && q.level !== level) return false;
       if (topic !== 'all' && q.topic !== topic) return false;
       if (kind !== 'all' && q.kind !== kind) return false;
@@ -92,11 +94,11 @@ export default function InterviewPrep() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="font-body-md font-medium text-on-surface"><InlineMarkup text={q.question} /></span>
-                      <span className="mt-1 block line-clamp-2 font-body-sm text-on-surface-variant"><InlineMarkup text={q.shortAnswer} /></span>
+                      <span className="mt-1 block font-body-sm text-on-surface-variant">{INTERVIEW_KIND_LABEL[q.kind] ?? q.kind}</span>
                       <span className="mt-2 flex flex-wrap gap-2">
                         <Badge tone="neutral">{q.topic}</Badge>
                         <Badge tone="info">{q.level}</Badge>
-                        {!interviewUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
+                        <ContentAccessBadge kind="interview" id={q.id} />
                       </span>
                     </span>
                   </Card>
@@ -121,20 +123,22 @@ export default function InterviewPrep() {
           </Card>
 
           {weak.length > 0 && (
-            <Card className="p-5">
-              <SectionLabel className="mb-3">Shore these up first</SectionLabel>
-              <div className="space-y-3">
-                {weak.map((t) => (
-                  <div key={t.topicId}>
-                    <div className="mb-1 flex items-center justify-between font-body-sm">
-                      <span className="truncate text-on-surface-variant">{t.label}</span>
-                      <span className="ml-2 font-mono text-on-surface">{Math.round(t.score * 100)}%</span>
+            <AdvancedAnalyticsGate>
+              <Card className="p-5">
+                <SectionLabel className="mb-3">Shore these up first</SectionLabel>
+                <div className="space-y-3">
+                  {weak.map((t) => (
+                    <div key={t.topicId}>
+                      <div className="mb-1 flex items-center justify-between font-body-sm">
+                        <span className="truncate text-on-surface-variant">{t.label}</span>
+                        <span className="ml-2 font-mono text-on-surface">{Math.round(t.score * 100)}%</span>
+                      </div>
+                      <ProgressBar value={t.score} />
                     </div>
-                    <ProgressBar value={t.score} />
-                  </div>
-                ))}
-              </div>
-            </Card>
+                  ))}
+                </div>
+              </Card>
+            </AdvancedAnalyticsGate>
           )}
         </div>
       </div>

@@ -87,7 +87,7 @@ export const quizToLesson = Object.fromEntries(
  */
 export const quizIndex = lessons
   .filter((l) => l.quizId)
-  .map((l) => ({ id: l.quizId, lessonId: l.id, moduleId: l.moduleId, topicIds: l.topicIds }));
+  .map((l) => ({ id: l.quizId, lessonId: l.id, moduleId: l.moduleId, topicIds: l.topicIds, questions: l.quizQuestions }));
 
 export const lessonsByModule = modules.reduce((acc, m) => {
   acc[m.id] = m.lessonIds.map((id) => lessonById[id]).filter(Boolean);

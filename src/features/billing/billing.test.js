@@ -161,7 +161,7 @@ describe("central access catalog", () => {
     );
   });
 
-  it("keeps existing stable-ID curriculum content free until explicitly tagged", () => {
+  it("keeps the entire core curriculum free", () => {
     expect(
       canAccessContent({
         kind: "lesson",

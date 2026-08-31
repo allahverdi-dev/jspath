@@ -4,6 +4,7 @@ import { search, groupResults, KIND_LABEL } from './searchIndex.js';
 import { Icon, Badge, cx } from '../../components/ui/index.jsx';
 import { contentStats } from '../../content/registry.js';
 import { useModalFocus } from '../../hooks/useModalFocus.js';
+import { ContentAccessBadge } from '../../components/billing/ContentAccessBadge.jsx';
 
 const QUICK_LINKS = [
   { label: 'Curriculum', to: '/curriculum', icon: 'school' },
@@ -171,6 +172,7 @@ export function SearchOverlay({ open, onClose }) {
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="truncate font-body-sm font-medium text-on-surface">{item.title}</span>
                           {item.difficulty && <Badge tone="neutral">{item.difficulty}</Badge>}
+                          <ContentAccessBadge kind={item.kind} id={item.id} />
                         </span>
                         {item.description && (
                           <span className="mt-0.5 line-clamp-2 font-body-sm text-on-surface-variant">

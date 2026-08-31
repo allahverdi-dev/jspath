@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { EntitlementProvider, useEntitlements } from './EntitlementProvider.jsx';
+import { FEATURE } from '../features/billing/plans.js';
 
 const auth = vi.hoisted(() => ({
   value: {
@@ -18,17 +19,24 @@ const billing = vi.hoisted(() => ({
 }));
 
 vi.mock('./AuthProvider.jsx', () => ({ useAuth: () => auth.value }));
+vi.mock('../features/billing/plans.js', async (importOriginal) => ({
+  ...await importOriginal(),
+  isBillingConfigured: () => false,
+}));
 vi.mock('../services/billing.js', () => ({
   loadOwnSubscriptions: billing.loadOwnSubscriptions,
   reconcileOwnSubscription: billing.reconcileOwnSubscription,
 }));
 
 function EntitlementStatus() {
-  const { plan, loading, subscriptions } = useEntitlements();
+  const { plan, loading, subscriptions, hasFeature, canAccessContent } = useEntitlements();
   return (
     <div>
       <span>{loading ? 'Loading' : plan}</span>
       <span>{subscriptions[0]?.last_verified_at ?? 'No subscription'}</span>
+      {!loading && <span>{hasFeature(FEATURE.ADVANCED_ANALYTICS) ? 'Analytics allowed' : 'Analytics locked'}</span>}
+      {!loading && <span>{canAccessContent('challenge', 'ch-exp-state-machine') ? 'Sample allowed' : 'Sample locked'}</span>}
+      {!loading && <span>{canAccessContent('challenge', 'future-premium') ? 'Premium allowed' : 'Premium locked'}</span>}
     </div>
   );
 }
@@ -99,5 +107,8 @@ describe('automatic entitlement reconciliation', () => {
     expect(await screen.findByText('free')).toBeInTheDocument();
     expect(screen.getByText('No subscription')).toBeInTheDocument();
     expect(billing.reconcileOwnSubscription).not.toHaveBeenCalled();
+    expect(screen.getByText('Analytics locked')).toBeInTheDocument();
+    expect(screen.getByText('Sample allowed')).toBeInTheDocument();
+    expect(screen.getByText('Premium locked')).toBeInTheDocument();
   });
 });

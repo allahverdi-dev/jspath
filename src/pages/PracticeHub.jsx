@@ -9,6 +9,10 @@ import { weakTopics, allTopicMastery } from '../features/mastery/masteryEngine.j
 import { reviewQueue } from '../features/progress/recommendations.js';
 import { TOPIC_BY_ID } from '../content/topics.js';
 import { DIFFICULTY_ORDER, EXERCISE_KIND } from '../content/schema/types.js';
+import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
+import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGate.jsx';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
+import { FEATURE } from '../features/billing/plans.js';
 
 const STATUS_TABS = [
   { value: 'all', label: 'All' },
@@ -19,6 +23,9 @@ const STATUS_TABS = [
 
 export default function PracticeHub() {
   const { state } = useUserState();
+  const { hasFeature } = useEntitlements();
+  const sessionsUnlocked = hasFeature(FEATURE.PREMIUM_PRACTICE);
+  const analyticsUnlocked = hasFeature(FEATURE.ADVANCED_ANALYTICS);
   const [status, setStatus] = useState('all');
   const [topic, setTopic] = useState('all');
   const [difficulty, setDifficulty] = useState('all');
@@ -71,17 +78,17 @@ export default function PracticeHub() {
           },
           {
             title: 'Weak topics',
-            description: weak.length > 0 ? `Focus on ${weak[0].label}` : 'Complete some work first',
+            description: analyticsUnlocked ? (weak.length > 0 ? `Focus on ${weak[0].label}` : 'Complete some work first') : 'Guided practice for your weak areas.',
             icon: 'trending_down',
             to: '/practice/session?mode=weak',
-            disabled: weak.length === 0,
+            disabled: sessionsUnlocked && weak.length === 0,
           },
           {
             title: 'Review mistakes',
             description: review.length > 0 ? `${review.length} item${review.length === 1 ? '' : 's'} to revisit` : 'No mistakes recorded',
             icon: 'history',
             to: '/practice/session?mode=mistakes',
-            disabled: review.length === 0,
+            disabled: sessionsUnlocked && review.length === 0,
           },
           {
             title: 'Random practice',
@@ -98,7 +105,7 @@ export default function PracticeHub() {
             className={`block p-5 ${card.disabled ? 'opacity-50' : ''}`}
           >
             <Icon name={card.icon} size={22} className={card.tone === 'primary' ? 'text-primary-ink' : 'text-on-surface-variant'} />
-            <p className="mt-3 font-body-md font-semibold text-on-surface">{card.title}</p>
+            <p className="mt-3 flex flex-wrap items-center gap-2 font-body-md font-semibold text-on-surface">{card.title}<Badge tone="primary" icon="lock">Pro</Badge></p>
             <p className="mt-1 font-body-sm text-on-surface-variant">{card.description}</p>
           </Card>
         ))}
@@ -163,6 +170,7 @@ export default function PracticeHub() {
                       <span className="mt-1 block line-clamp-2 font-body-sm text-on-surface-variant">{exercise.instructions}</span>
                       <span className="mt-2 flex flex-wrap items-center gap-2">
                         <DifficultyBadge difficulty={exercise.difficulty} />
+                        <ContentAccessBadge kind="exercise" id={exercise.id} />
                         {exercise.topicIds.slice(0, 2).map((t) => (
                           <Badge key={t} tone="neutral">{TOPIC_BY_ID[t]?.label ?? t}</Badge>
                         ))}
@@ -178,61 +186,65 @@ export default function PracticeHub() {
 
         {/* Rail */}
         <div className="space-y-4 lg:col-span-4">
-          <Card className="p-5">
-            <SectionLabel className="mb-3">Weakest topics</SectionLabel>
-            {weak.length === 0 ? (
-              <p className="font-body-sm text-on-surface-variant">
-                Complete exercises and quizzes and your weakest areas will surface here.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {weak.map((t) => (
-                  <div key={t.topicId}>
-                    <div className="mb-1 flex items-center justify-between font-body-sm">
-                      <span className="truncate text-on-surface-variant">{t.label}</span>
-                      <span className="ml-2 shrink-0 font-mono text-on-surface">{Math.round(t.score * 100)}%</span>
-                    </div>
-                    <ProgressBar value={t.score} />
+          <AdvancedAnalyticsGate>
+            <div className="space-y-4">
+              <Card className="p-5">
+                <SectionLabel className="mb-3">Weakest topics</SectionLabel>
+                {weak.length === 0 ? (
+                  <p className="font-body-sm text-on-surface-variant">
+                    Complete exercises and quizzes and your weakest areas will surface here.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {weak.map((t) => (
+                      <div key={t.topicId}>
+                        <div className="mb-1 flex items-center justify-between font-body-sm">
+                          <span className="truncate text-on-surface-variant">{t.label}</span>
+                          <span className="ml-2 shrink-0 font-mono text-on-surface">{Math.round(t.score * 100)}%</span>
+                        </div>
+                        <ProgressBar value={t.score} />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                )}
+              </Card>
 
-          {review.length > 0 && (
-            <Card className="p-5">
-              <SectionLabel className="mb-3">Review your mistakes</SectionLabel>
-              <ul className="space-y-2">
-                {review.slice(0, 6).map((item, i) => (
-                  <li key={`${item.refId}-${i}`}>
-                    <Link to={item.to} className="flex items-start gap-2 font-body-sm text-on-surface-variant transition hover:text-on-surface">
-                      <Icon name={item.icon} size={15} className="mt-0.5 shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <Button to="/practice/session?mode=mistakes" variant="secondary" size="sm" className="mt-4 w-full">
-                Practise these
-              </Button>
-            </Card>
-          )}
+              {review.length > 0 && (
+                <Card className="p-5">
+                  <SectionLabel className="mb-3">Review your mistakes</SectionLabel>
+                  <ul className="space-y-2">
+                    {review.slice(0, 6).map((item, i) => (
+                      <li key={`${item.refId}-${i}`}>
+                        <Link to={item.to} className="flex items-start gap-2 font-body-sm text-on-surface-variant transition hover:text-on-surface">
+                          <Icon name={item.icon} size={15} className="mt-0.5 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button to="/practice/session?mode=mistakes" variant="secondary" size="sm" className="mt-4 w-full">
+                    Practise these
+                  </Button>
+                </Card>
+              )}
 
-          <Card className="p-5">
-            <SectionLabel className="mb-3">Mastery overview</SectionLabel>
-            <div className="space-y-2">
-              {['mastered', 'practicing', 'learning', 'notStarted'].map((level) => {
-                const count = topicScores.filter((t) => t.level === level).length;
-                const labels = { mastered: 'Mastered', practicing: 'Practicing', learning: 'Learning', notStarted: 'Not started' };
-                return (
-                  <div key={level} className="flex items-center justify-between font-body-sm">
-                    <span className="text-on-surface-variant">{labels[level]}</span>
-                    <span className="font-mono text-on-surface">{count}</span>
-                  </div>
-                );
-              })}
+              <Card className="p-5">
+                <SectionLabel className="mb-3">Mastery overview</SectionLabel>
+                <div className="space-y-2">
+                  {['mastered', 'practicing', 'learning', 'notStarted'].map((level) => {
+                    const count = topicScores.filter((t) => t.level === level).length;
+                    const labels = { mastered: 'Mastered', practicing: 'Practicing', learning: 'Learning', notStarted: 'Not started' };
+                    return (
+                      <div key={level} className="flex items-center justify-between font-body-sm">
+                        <span className="text-on-surface-variant">{labels[level]}</span>
+                        <span className="font-mono text-on-surface">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
             </div>
-          </Card>
+          </AdvancedAnalyticsGate>
         </div>
       </div>
     </div>

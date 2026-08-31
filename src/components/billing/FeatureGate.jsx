@@ -25,16 +25,29 @@ export function LockedFeature({
   );
 }
 
-export function FeatureGate({ feature, children, ...lockedProps }) {
+export function FeatureGate({ feature, children, fallback, ...lockedProps }) {
   const { loading, hasFeature } = useEntitlements();
   if (loading) return <p className="py-10 text-center font-body-sm text-on-surface-variant" role="status">Checking access…</p>;
   if (hasFeature(feature)) return children;
-  return <LockedFeature {...lockedProps} />;
+  return fallback !== undefined ? fallback : <LockedFeature {...lockedProps} />;
 }
 
-export function ContentGate({ kind, id, children, ...lockedProps }) {
+export function ContentGate({ kind, id, children, fallback, ...lockedProps }) {
   const { loading, canAccessContent } = useEntitlements();
   if (loading) return <p className="py-10 text-center font-body-sm text-on-surface-variant" role="status">Checking access…</p>;
   if (canAccessContent(kind, id)) return children;
-  return <LockedFeature {...lockedProps} />;
+  return fallback !== undefined ? fallback : <LockedFeature {...lockedProps} />;
+}
+
+/** A quiet inline upsell; no modal and no hidden preview of paid results. */
+export function ProPreview({ title, message }) {
+  return (
+    <Card className="border-primary/20 p-5">
+      <h2 className="flex items-start gap-2 font-heading text-headline-sm text-on-surface">
+        <Icon name="lock" size={18} className="mt-1 shrink-0 text-primary-ink" />{title}
+      </h2>
+      <p className="mt-2 font-body-sm text-on-surface-variant">{message}</p>
+      <Button to="/pricing" variant="secondary" size="sm" className="mt-4">Explore Pro</Button>
+    </Card>
+  );
 }

@@ -6,6 +6,7 @@ import { Button, Icon, Badge, DifficultyBadge, Disclosure, cx } from '../../comp
 import { runCode } from '../../services/sandbox/index.js';
 import { useUserState } from '../../state/UserStateProvider.jsx';
 import { EXERCISE_KIND } from '../../content/schema/types.js';
+import { ContentGate, ProPreview } from '../../components/billing/FeatureGate.jsx';
 
 const CHOICE_KINDS = [
   EXERCISE_KIND.PREDICT_OUTPUT,
@@ -34,7 +35,17 @@ const KIND_LABEL = {
  * reveals the worked solution once the learner deliberately asks for it. Nothing
  * ever just says "Wrong."
  */
-export function ExerciseRunner({ exercise, onSolved, compact = false }) {
+export function ExerciseRunner(props) {
+  return (
+    <ContentGate kind="exercise" id={props.exercise.id} fallback={
+      <ProPreview title={props.exercise.title} message="This deeper practice exercise is included with Pro. Continue with the Free exercises in this lesson, or explore Pro for the complete practice library." />
+    }>
+      <AccessibleExerciseRunner key={props.exercise.id} {...props} />
+    </ContentGate>
+  );
+}
+
+function AccessibleExerciseRunner({ exercise, onSolved, compact = false }) {
   const { state, actions } = useUserState();
   const record = state.exercises[exercise.id];
   const isChoice = CHOICE_KINDS.includes(exercise.kind);

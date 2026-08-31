@@ -38,9 +38,9 @@ export function continueLesson(state, { lessons, modules }) {
  * Weak-topic practice is ranked above simply moving forward, because closing a
  * gap is worth more than adding another partly-understood topic on top of it.
  */
-export function recommendations(state, content, { limit = 4 } = {}) {
+export function recommendations(state, content, { limit = 4, includeMastery = true } = {}) {
   const out = [];
-  const weak = weakTopics(state, content.topics, content, { limit: 2, threshold: 0.6 });
+  const weak = includeMastery ? weakTopics(state, content.topics, content, { limit: 2, threshold: 0.6 }) : [];
 
   for (const topic of weak) {
     const exercise = content.exercises.find(

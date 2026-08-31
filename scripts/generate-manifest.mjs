@@ -71,6 +71,8 @@ const manifest = {
       exerciseIds: (l.exercises ?? []).map((e) => e.id),
       quizId: l.quiz?.id ?? null,
       quizQuestionCount: l.quiz?.questions?.length ?? 0,
+      // Assessment evidence only: never publish answer keys in discovery metadata.
+      quizQuestions: (l.quiz?.questions ?? []).map((q) => ({ id: q.id, topicIds: q.topicIds ?? [] })),
       keywords: lessonKeywords(l),
       source: relPath(l),
     })),
@@ -121,7 +123,6 @@ const manifest = {
     level: q.level,
     kind: q.kind ?? 'concept',
     topicIds: q.topicIds,
-    shortAnswer: q.shortAnswer,
     relatedLessons: q.relatedLessons ?? [],
     source: relPath(q),
   })),

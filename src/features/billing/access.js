@@ -1,22 +1,17 @@
 import { FEATURE, PLAN_FEATURES } from './plans.js';
+import { FREE_SAMPLE_CONTENT_IDS, PRO_CONTENT_IDS } from './accessCatalog.js';
+
+export { FREE_SAMPLE_CONTENT_IDS, PRO_CONTENT_IDS } from './accessCatalog.js';
 
 export const CONTENT_ACCESS = Object.freeze({
   FREE: 'free',
   PRO: 'pro',
 });
 
-/**
- * Stable IDs can be added here when a commercial content allocation is approved.
- * Empty sets deliberately keep the existing curriculum free instead of inventing
- * a module-number cutoff or silently locking hundreds of authored items.
- */
-export const PRO_CONTENT_IDS = Object.freeze({
-  module: new Set(),
-  lesson: new Set(),
-  exercise: new Set(),
-  reference: new Set(),
-  cheatsheet: new Set(),
-});
+const proExercises = new Set(PRO_CONTENT_IDS.exercise);
+const freeSamples = Object.fromEntries(
+  Object.entries(FREE_SAMPLE_CONTENT_IDS).map(([kind, ids]) => [kind, new Set(ids)]),
+);
 
 const FEATURE_BY_CONTENT_KIND = Object.freeze({
   challenge: FEATURE.CHALLENGES,
@@ -25,16 +20,18 @@ const FEATURE_BY_CONTENT_KIND = Object.freeze({
 });
 
 export function requiredPlanForContent(kind, id) {
-  if (FEATURE_BY_CONTENT_KIND[kind]) return CONTENT_ACCESS.PRO;
-  return PRO_CONTENT_IDS[kind]?.has(id) ? CONTENT_ACCESS.PRO : CONTENT_ACCESS.FREE;
+  if (Object.hasOwn(FEATURE_BY_CONTENT_KIND, kind)) {
+    return freeSamples[kind].has(id) ? CONTENT_ACCESS.FREE : CONTENT_ACCESS.PRO;
+  }
+  if (kind === 'exercise' && proExercises.has(id)) return CONTENT_ACCESS.PRO;
+  return CONTENT_ACCESS.FREE;
 }
 
 export function planHasFeature(plan, feature) {
   return Boolean(PLAN_FEATURES[plan]?.has(feature));
 }
 
-export function canAccessContent({ kind, id, plan, enforcePaidAccess = true }) {
-  if (!enforcePaidAccess) return true;
+export function canAccessContent({ kind, id, plan }) {
   if (requiredPlanForContent(kind, id) === CONTENT_ACCESS.FREE) return true;
   const feature = FEATURE_BY_CONTENT_KIND[kind] ?? {
     module: FEATURE.FULL_CURRICULUM,

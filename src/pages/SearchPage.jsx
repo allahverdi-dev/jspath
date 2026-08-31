@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { search, groupResults, KIND_LABEL } from '../features/search/searchIndex.js';
 import { Card, Icon, Badge, Input, EmptyState, Tabs } from '../components/ui/index.jsx';
 import { contentStats } from '../content/registry.js';
+import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
 
 export default function SearchPage() {
   const [params, setParams] = useSearchParams();
@@ -63,6 +64,7 @@ export default function SearchPage() {
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-body-md font-medium text-on-surface">{item.title}</span>
                         {item.difficulty && <Badge tone="neutral">{item.difficulty}</Badge>}
+                        <ContentAccessBadge kind={item.kind} id={item.id} />
                       </span>
                       {item.description && <span className="mt-1 block line-clamp-2 font-body-sm text-on-surface-variant">{item.description}</span>}
                     </span>

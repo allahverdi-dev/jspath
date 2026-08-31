@@ -101,11 +101,11 @@ function buildIndex() {
       id: q.id,
       title: q.question,
       subtitle: `Interview · ${q.topic}`,
-      description: q.shortAnswer,
+      description: `${q.topic} · ${q.level} · ${q.kind}`,
       to: `/interview/question/${q.id}`,
       icon: 'record_voice_over',
       difficulty: q.level,
-      haystack: normalise([q.question, q.topic, q.shortAnswer].join(' ')),
+      haystack: normalise([q.question, q.topic, q.kind].join(' ')),
       boost: 1.05,
     });
   }

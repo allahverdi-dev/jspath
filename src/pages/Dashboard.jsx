@@ -13,6 +13,10 @@ import {
 } from '../features/progress/progressEngine.js';
 import { overallMastery, allTopicMastery, rankFor } from '../features/mastery/masteryEngine.js';
 import { recommendations, continueLesson, nextLesson, dailyChallenge } from '../features/progress/recommendations.js';
+import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGate.jsx';
+import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
+import { useEntitlements } from '../state/EntitlementProvider.jsx';
+import { FEATURE } from '../features/billing/plans.js';
 
 function greeting(date = new Date()) {
   const h = date.getHours();
@@ -63,12 +67,14 @@ function ActivityHeatmap({ days }) {
 export default function Dashboard() {
   const { state, streak, xp, isGuest } = useUserState();
   const { displayName } = useAuth();
+  const { hasFeature } = useEntitlements();
+  const analyticsUnlocked = hasFeature(FEATURE.ADVANCED_ANALYTICS);
 
   const name = displayName ?? state.profile.displayName ?? 'there';
   const progress = useMemo(() => curriculumProgress(state, contentIndex.modules), [state]);
   const mastery = useMemo(() => overallMastery(state, contentIndex.topics, contentIndex), [state]);
   const topics = useMemo(() => allTopicMastery(state, contentIndex.topics, contentIndex), [state]);
-  const recs = useMemo(() => recommendations(state, contentIndex), [state]);
+  const recs = useMemo(() => recommendations(state, contentIndex, { includeMastery: analyticsUnlocked }), [state, analyticsUnlocked]);
   const heatmap = useMemo(() => activityHeatmap(state, 84), [state]);
   const exStats = useMemo(() => exerciseStats(state), [state]);
   const chStats = useMemo(() => challengeStats(state), [state]);
@@ -190,7 +196,7 @@ export default function Dashboard() {
               <div>
                 <h2 className="font-heading text-headline-sm text-on-surface">Recommended for you</h2>
                 <p className="mt-1 font-body-sm text-on-surface-variant">
-                  Based on your quiz accuracy, solved exercises and where you left off.
+                  {analyticsUnlocked ? 'Based on your assessment results and where you left off.' : 'Continue learning and revisit exercises you have attempted.'}
                 </p>
               </div>
             </div>
@@ -211,6 +217,7 @@ export default function Dashboard() {
                       <Badge tone="neutral">{rec.meta}</Badge>
                     </div>
                     <p className="mt-3 font-body-md font-semibold text-on-surface">{rec.title}</p>
+                    <ContentAccessBadge kind={rec.kind} id={rec.id} />
                     <p className="mt-1 line-clamp-2 font-body-sm text-on-surface-variant">{rec.description}</p>
                     <p className="mt-3 flex items-center gap-1.5 font-body-sm text-primary-ink">
                       <Icon name="auto_awesome" size={13} />
@@ -226,19 +233,21 @@ export default function Dashboard() {
         {/* Sidebar */}
         <div className="flex flex-col gap-6 lg:col-span-4">
           {/* Mastery */}
-          <Card className="p-6 text-center">
-            <ProgressRing value={mastery.score} size={128} stroke={6} className="mx-auto">
-              <div>
-                <p className="font-heading text-headline-md text-on-surface">{Math.round(mastery.score * 100)}%</p>
-                <SectionLabel>Mastery</SectionLabel>
-              </div>
-            </ProgressRing>
-            <h3 className="mt-4 font-heading text-title-md text-on-surface">JavaScript Mastery</h3>
-            <p className="mt-1 font-body-sm text-on-surface-variant">{rankFor(mastery.score)}</p>
-            <p className="mt-3 font-body-sm text-on-surface-variant">
-              {mastery.mastered} of {mastery.total} topics mastered
-            </p>
-          </Card>
+          <AdvancedAnalyticsGate>
+            <Card className="p-6 text-center">
+              <ProgressRing value={mastery.score} size={128} stroke={6} className="mx-auto">
+                <div>
+                  <p className="font-heading text-headline-md text-on-surface">{Math.round(mastery.score * 100)}%</p>
+                  <SectionLabel>Mastery</SectionLabel>
+                </div>
+              </ProgressRing>
+              <h3 className="mt-4 font-heading text-title-md text-on-surface">JavaScript Mastery</h3>
+              <p className="mt-1 font-body-sm text-on-surface-variant">{rankFor(mastery.score)}</p>
+              <p className="mt-3 font-body-sm text-on-surface-variant">
+                {mastery.mastered} of {mastery.total} topics mastered
+              </p>
+            </Card>
+          </AdvancedAnalyticsGate>
 
           {/* Daily challenge */}
           {daily && (
@@ -250,6 +259,7 @@ export default function Dashboard() {
               <h3 className="mt-2 font-heading text-title-md text-on-surface">{daily.title}</h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 <DifficultyBadge difficulty={daily.difficulty} />
+                <ContentAccessBadge kind="challenge" id={daily.id} />
                 <Badge tone="neutral">{daily.category}</Badge>
                 <Badge tone="primary">+{daily.xp} XP</Badge>
               </div>
@@ -265,29 +275,31 @@ export default function Dashboard() {
           )}
 
           {/* Skill breakdown */}
-          <Card className="p-5">
-            <CardHeader title="Skill breakdown" />
-            {startedTopics.length === 0 ? (
-              <p className="mt-4 font-body-sm text-on-surface-variant">
-                Your topic scores appear here once you complete lessons and exercises.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {startedTopics.slice(0, 6).map((topic) => (
-                  <div key={topic.topicId}>
-                    <div className="mb-1 flex items-center justify-between font-body-sm">
-                      <span className="truncate text-on-surface-variant">{topic.label}</span>
-                      <span className="ml-2 shrink-0 font-mono text-on-surface">{Math.round(topic.score * 100)}%</span>
+          <AdvancedAnalyticsGate quiet>
+            <Card className="p-5">
+              <CardHeader title="Skill breakdown" />
+              {startedTopics.length === 0 ? (
+                <p className="mt-4 font-body-sm text-on-surface-variant">
+                  Your topic scores appear here once you complete lessons and exercises.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {startedTopics.slice(0, 6).map((topic) => (
+                    <div key={topic.topicId}>
+                      <div className="mb-1 flex items-center justify-between font-body-sm">
+                        <span className="truncate text-on-surface-variant">{topic.label}</span>
+                        <span className="ml-2 shrink-0 font-mono text-on-surface">{Math.round(topic.score * 100)}%</span>
+                      </div>
+                      <ProgressBar value={topic.score} label={`${topic.label} mastery`} />
                     </div>
-                    <ProgressBar value={topic.score} label={`${topic.label} mastery`} />
-                  </div>
-                ))}
-              </div>
-            )}
-            <Button to="/my-learning" variant="ghost" size="sm" className="mt-4 w-full" iconRight="arrow_forward">
-              View full skill tree
-            </Button>
-          </Card>
+                  ))}
+                </div>
+              )}
+              <Button to="/my-learning" variant="ghost" size="sm" className="mt-4 w-full" iconRight="arrow_forward">
+                View full skill tree
+              </Button>
+            </Card>
+          </AdvancedAnalyticsGate>
 
           {/* Stats */}
           <Card className="divide-y divide-[rgb(var(--c-outline-variant))] p-0">

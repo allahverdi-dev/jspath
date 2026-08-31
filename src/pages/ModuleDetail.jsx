@@ -10,6 +10,7 @@ import { allTopicMastery } from '../features/mastery/masteryEngine.js';
 import { TRACK_LABEL } from '../content/schema/types.js';
 import { TOPIC_BY_ID } from '../content/topics.js';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
+import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGate.jsx';
 
 export default function ModuleDetail() {
   const { moduleSlug } = useParams();
@@ -160,22 +161,24 @@ export default function ModuleDetail() {
           )}
 
           {topicScores.length > 0 && (
-            <Card className="p-5">
-              <SectionLabel className="mb-3">Topics covered</SectionLabel>
-              <div className="space-y-3">
-                {topicScores.map((t) => (
-                  <div key={t.topicId}>
-                    <div className="mb-1 flex items-center justify-between font-body-sm">
-                      <span className="truncate text-on-surface-variant">
-                        {TOPIC_BY_ID[t.topicId]?.label ?? t.topicId}
-                      </span>
-                      <span className="ml-2 shrink-0 font-mono text-on-surface">{Math.round(t.score * 100)}%</span>
+            <AdvancedAnalyticsGate>
+              <Card className="p-5">
+                <SectionLabel className="mb-3">Topic mastery</SectionLabel>
+                <div className="space-y-3">
+                  {topicScores.map((t) => (
+                    <div key={t.topicId}>
+                      <div className="mb-1 flex items-center justify-between font-body-sm">
+                        <span className="truncate text-on-surface-variant">
+                          {TOPIC_BY_ID[t.topicId]?.label ?? t.topicId}
+                        </span>
+                        <span className="ml-2 shrink-0 font-mono text-on-surface">{Math.round(t.score * 100)}%</span>
+                      </div>
+                      <ProgressBar value={t.score} />
                     </div>
-                    <ProgressBar value={t.score} />
-                  </div>
-                ))}
-              </div>
-            </Card>
+                  ))}
+                </div>
+              </Card>
+            </AdvancedAnalyticsGate>
           )}
         </div>
       </div>
