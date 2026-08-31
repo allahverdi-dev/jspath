@@ -364,4 +364,32 @@ describe("trusted Gumroad event normalization", () => {
     expect(record.current_period_end).toBe("2026-09-30T19:53:53Z");
     expect(record.ended_at).toBe(null);
   });
+  it('expires a membership when Gumroad sends subscription_ended', () => {
+  const endedAt = '2026-09-30T19:53:53Z';
+
+  const record = normalizeSubscription({
+    eventType: 'subscription_ended',
+    sale: {
+      id: 'sale-1',
+      subscription_id: 'sub-1',
+      product_id: 'product-1',
+      email: 'a@example.com',
+      variants: { Tier: 'Pro' },
+    },
+    subscriber: {
+      id: 'sub-1',
+      status: 'cancelled',
+      recurrence: 'monthly',
+      cancelled_at: endedAt,
+      ended_at: endedAt,
+    },
+    now: new Date('2026-09-30T20:00:00Z'),
+  });
+
+  expect(record.status).toBe('expired');
+  expect(record.cancel_at_period_end).toBe(false);
+  expect(record.current_period_end).toBe(endedAt);
+  expect(record.ended_at).toBe(endedAt);
+});
+
 });
