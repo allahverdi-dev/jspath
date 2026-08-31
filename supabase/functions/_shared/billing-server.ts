@@ -54,29 +54,128 @@ export async function resolveUser(admin: ReturnType<typeof adminClient>, sale: R
   return data.user.email?.trim().toLowerCase() === verifiedEmail ? data.user : null;
 }
 
-export async function processSubscription({ eventType, payload, authenticatedUser }: { eventType: string; payload: Record<string, unknown>; authenticatedUser?: { id: string; email?: string } }) {
-  const saleId = String(payload.sale_id ?? payload.id ?? '');
-  if (!saleId) return { outcome: 'unresolved', reason: 'No Gumroad sale ID was supplied.' };
-
-  const sale = await verifiedSale(saleId);
-  if (!isAllowedProduct(allowedProducts, sale)) return { outcome: 'rejected', reason: 'Product or tier is not allow-listed.' };
-
-  const subscriptionId = String(sale.subscription_id ?? payload.subscription_id ?? '');
-  if (!subscriptionId) return { outcome: 'rejected', reason: 'The verified sale is not a recurring membership.' };
-  const subscriber = await verifiedSubscriber(subscriptionId);
+export async function processSubscription({
+  eventType,
+  payload,
+  authenticatedUser,
+}: {
+  eventType: string;
+  payload: Record<string, unknown>;
+  authenticatedUser?: { id: string; email?: string };
+}) {
   const admin = adminClient();
-  const user = await resolveUser(admin, sale, payload, authenticatedUser);
-  if (!user) return { outcome: 'unresolved', reason: 'Purchaser identity did not match a verified JSPath account.' };
 
-  const record = normalizeSubscription({ eventType, sale, subscriber });
-  if (!record.provider_subscription_id || !record.provider_sale_id || !record.provider_product_id || !record.customer_email) {
-    return { outcome: 'unresolved', reason: 'Verified provider data was incomplete.' };
+  const hintedSubscriptionId = String(payload.subscription_id ?? '').trim();
+  let saleId = String(payload.sale_id ?? '').trim();
+
+  // Gumroad lifecycle webhooks such as cancellation may contain only
+  // subscription_id. Resolve the original, previously verified sale from
+  // our protected subscription row instead of trusting client/provider hints.
+  if (!saleId && hintedSubscriptionId) {
+    const { data: existingSubscription, error: lookupError } = await admin
+      .from('subscriptions')
+      .select('provider_sale_id')
+      .eq('provider', 'gumroad')
+      .eq('provider_subscription_id', hintedSubscriptionId)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+
+    saleId = String(existingSubscription?.provider_sale_id ?? '').trim();
   }
 
-  const { error } = await admin.from('subscriptions').upsert(
-    { ...record, user_id: user.id },
-    { onConflict: 'provider,provider_subscription_id' },
+  // Keep backwards compatibility for provider payloads where `id`
+  // represents a sale, but prefer the verified subscription mapping above
+  // whenever a subscription_id is available.
+  if (!saleId) {
+    saleId = String(payload.id ?? '').trim();
+  }
+
+  if (!saleId) {
+    return {
+      outcome: 'unresolved',
+      reason: 'No Gumroad sale ID could be resolved.',
+    };
+  }
+
+  const sale = await verifiedSale(saleId);
+
+  if (!isAllowedProduct(allowedProducts, sale)) {
+    return {
+      outcome: 'rejected',
+      reason: 'Product or tier is not allow-listed.',
+    };
+  }
+
+  const subscriptionId = String(
+    sale.subscription_id ?? hintedSubscriptionId ?? '',
+  ).trim();
+
+  if (!subscriptionId) {
+    return {
+      outcome: 'rejected',
+      reason: 'The verified sale is not a recurring membership.',
+    };
+  }
+
+  // If Gumroad supplied a subscription identity, it must agree with the
+  // subscription attached to the verified sale.
+  if (
+    hintedSubscriptionId &&
+    sale.subscription_id &&
+    String(sale.subscription_id).trim() !== hintedSubscriptionId
+  ) {
+    return {
+      outcome: 'rejected',
+      reason: 'Subscription identity did not match the verified sale.',
+    };
+  }
+
+  const subscriber = await verifiedSubscriber(subscriptionId);
+
+  const user = await resolveUser(
+    admin,
+    sale,
+    payload,
+    authenticatedUser,
   );
+
+  if (!user) {
+    return {
+      outcome: 'unresolved',
+      reason: 'Purchaser identity did not match a verified JSPath account.',
+    };
+  }
+
+  const record = normalizeSubscription({
+    eventType,
+    sale,
+    subscriber,
+  });
+
+  if (
+    !record.provider_subscription_id ||
+    !record.provider_sale_id ||
+    !record.provider_product_id ||
+    !record.customer_email
+  ) {
+    return {
+      outcome: 'unresolved',
+      reason: 'Verified provider data was incomplete.',
+    };
+  }
+
+  const { error } = await admin
+    .from('subscriptions')
+    .upsert(
+      { ...record, user_id: user.id },
+      { onConflict: 'provider,provider_subscription_id' },
+    );
+
   if (error) throw error;
-  return { outcome: 'processed', subscription: record };
+
+  return {
+    outcome: 'processed',
+    subscription: record,
+  };
 }
