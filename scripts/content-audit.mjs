@@ -12,7 +12,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { loadAllContent } from './lib/load-content.mjs';
 import { VALIDATORS, scanForPlaceholders } from '../src/content/schema/validate.js';
-import { SECTION } from '../src/content/schema/types.js';
+import { SECTION, PLACEMENT_DOMAINS, PLACEMENT_DOMAIN_TOPICS } from '../src/content/schema/types.js';
 
 const errors = [];
 const warnings = [];
@@ -40,6 +40,7 @@ const collections = [
   ['interview', content.interview],
   ['reference', content.references],
   ['cheatsheet', content.cheatSheets],
+  ['placement', content.placement],
 ];
 
 for (const [kind, items] of collections) {
@@ -118,7 +119,7 @@ for (const l of content.lessons) {
 
 for (const items of [
   content.exercises, content.challenges, content.projects,
-  content.interview, content.references, content.cheatSheets,
+  content.interview, content.references, content.cheatSheets, content.placement,
 ]) {
   for (const item of items) checkTopics(item, `${item.id}`);
 }
@@ -278,6 +279,57 @@ const countExamples = (lesson) =>
     (s) => s.kind === SECTION.CODE || s.kind === SECTION.ANNOTATED_CODE || s.kind === SECTION.COMPARISON,
   ).length;
 
+/* ------------------------------------------------------------------ *
+ * Placement assessment
+ * ------------------------------------------------------------------ *
+ * Placement is small and every question carries real weight, so a duplicate or
+ * a stale answer key distorts a learner's whole recommendation. Prompts are
+ * compared together with their code, because "What is logged?" is a legitimately
+ * repeated prompt attached to different snippets.
+ */
+checkUnique(content.placement, 'id', 'placement question');
+
+{
+  const seen = new Map();
+  const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+  for (const q of content.placement) {
+    const key = norm(q.prompt) + ' ' + norm(q.code);
+    if (seen.has(key)) {
+      err(`placement question ${q.id} duplicates ${seen.get(key)}`, src(q));
+    } else {
+      seen.set(key, q.id);
+    }
+  }
+
+  // Placement must not become a re-export of the interview bank or the quizzes.
+  const elsewhere = new Map();
+  for (const q of content.interview) elsewhere.set(norm(q.prompt), `interview ${q.id}`);
+  for (const quiz of content.quizzes) {
+    for (const q of quiz.questions ?? []) elsewhere.set(norm(q.prompt), `quiz question ${q.id}`);
+  }
+  for (const q of content.placement) {
+    const hit = elsewhere.get(norm(q.prompt));
+    // Shared short prompts like "What is logged?" are fine; identical long ones
+    // mean the question was copied rather than written for placement.
+    if (hit && norm(q.prompt).length > 40) {
+      err(`placement question ${q.id} reuses the prompt of ${hit}`, src(q));
+    }
+  }
+
+  // Every domain must actually be assessed, or its breakdown bar is a lie.
+  const covered = new Set(content.placement.map((q) => q.domain));
+  for (const d of PLACEMENT_DOMAINS) {
+    if (!covered.has(d)) err(`placement domain "${d}" has no questions`);
+  }
+
+  // The recommendation resolves against real modules, so every domain needs one.
+  const moduleTopics = new Set(content.modules.flatMap((m) => m.topicIds ?? []));
+  for (const d of PLACEMENT_DOMAINS) {
+    const reachable = (PLACEMENT_DOMAIN_TOPICS[d] ?? []).some((t) => moduleTopics.has(t));
+    if (!reachable) err(`placement domain "${d}" maps to no curriculum module`);
+  }
+}
+
 const stats = {
   modules: content.modules.length,
   modulesWithLessons: content.modules.filter((m) => m.lessonIds.length > 0).length,
@@ -292,6 +344,7 @@ const stats = {
   interviewQuestions: content.interview.length,
   references: content.references.length,
   cheatSheets: content.cheatSheets.length,
+  placementQuestions: content.placement.length,
   topics: content.topics.length,
   estimatedMinutes: content.lessons.reduce((n, l) => n + (l.estimatedMinutes ?? 0), 0),
 };
@@ -347,6 +400,7 @@ const rows = [
   ['Interview questions', stats.interviewQuestions],
   ['Reference entries', stats.references],
   ['Cheat sheets', stats.cheatSheets],
+  ['Placement questions', stats.placementQuestions],
   ['Topics tracked', stats.topics],
   ['Estimated learning time', `${Math.round(stats.estimatedMinutes / 60)}h`],
 ];

@@ -57,6 +57,8 @@ export function createInitialState(overrides = {}) {
     activity: [],
     mistakes: [],
     dailyChallenge: {},
+    /** The latest placement result, or null. A recommendation, never progress. */
+    placement: null,
     settings: {
       theme: 'dark',
       reduceMotion: false,
@@ -444,6 +446,32 @@ export function updateSettings(state, patch) {
 
 export function updateProfile(state, patch) {
   return { ...state, profile: { ...state.profile, ...patch } };
+}
+
+/* ------------------------------------------------------------------ *
+ * Placement
+ * ------------------------------------------------------------------ */
+
+/**
+ * Store a placement result.
+ *
+ * Placement is evidence for a recommendation, not a record of work: this writes
+ * exactly one key and deliberately touches nothing else. It must never mark a
+ * lesson complete, solve an exercise, award XP, or log activity — scoring well on
+ * a 42-question assessment is not the same as having done the curriculum, and
+ * faking that history would corrupt every mastery and streak calculation that
+ * reads from it.
+ *
+ * Saving a new result replaces the previous one outright, which is what makes a
+ * retake a clean attempt rather than a merge of two.
+ */
+export function savePlacement(state, placement) {
+  return { ...state, placement };
+}
+
+/** Discard the stored placement result, leaving all curriculum progress intact. */
+export function clearPlacement(state) {
+  return { ...state, placement: null };
 }
 
 /* ------------------------------------------------------------------ *

@@ -41,6 +41,7 @@ export async function loadAllContent() {
   const interview = [];
   const references = [];
   const cheatSheets = [];
+  const placement = [];
   const sourceOf = new Map();
 
   const note = (entity, file) => {
@@ -83,6 +84,15 @@ export async function loadAllContent() {
   await bucket('interview', interview, 'questions');
   await bucket('references', references, 'references');
   await bucket('cheat-sheets', cheatSheets, 'cheatSheets');
+  // Placement re-exports its domain files through index.js; loading both would
+  // double every question, so the bank is taken from the index alone.
+  {
+    const file = path.join(CONTENT, 'placement', 'index.js');
+    if (existsSync(file)) {
+      const mod = await importFile(file);
+      for (const item of mod.PLACEMENT_QUESTIONS ?? []) placement.push(note(item, file));
+    }
+  }
 
   // --- Assemble modules: lessonIds derive from the lessons themselves ---
   const modules = modulesMod.MODULES.map((m) => ({
@@ -103,6 +113,7 @@ export async function loadAllContent() {
     interview,
     references,
     cheatSheets,
+    placement,
     topics: topicsMod.TOPICS,
     topicIds: topicsMod.TOPIC_IDS,
     sourceOf,

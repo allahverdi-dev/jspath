@@ -6,7 +6,7 @@ import {
 } from '../components/ui/index.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
-import { contentIndex, contentStats } from '../content/registry.js';
+import { contentIndex, contentStats, moduleById } from '../content/registry.js';
 import {
   curriculumProgress, activityHeatmap, exerciseStats, quizAccuracy, challengeStats, projectStats,
   dayKey,
@@ -17,6 +17,7 @@ import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGa
 import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { FEATURE } from '../features/billing/plans.js';
+import { PLACEMENT_LEVEL_LABEL } from '../content/schema/types.js';
 
 function greeting(date = new Date()) {
   const h = date.getHours();
@@ -74,6 +75,9 @@ export default function Dashboard() {
   const progress = useMemo(() => curriculumProgress(state, contentIndex.modules), [state]);
   const mastery = useMemo(() => overallMastery(state, contentIndex.topics, contentIndex), [state]);
   const topics = useMemo(() => allTopicMastery(state, contentIndex.topics, contentIndex), [state]);
+  const placement = state.placement ?? null;
+  const placementModule = placement ? moduleById[placement.recommendedModuleId] : null;
+
   const recs = useMemo(() => recommendations(state, contentIndex, { includeMastery: analyticsUnlocked }), [state, analyticsUnlocked]);
   const heatmap = useMemo(() => activityHeatmap(state, 84), [state]);
   const exStats = useMemo(() => exerciseStats(state), [state]);
@@ -248,6 +252,50 @@ export default function Dashboard() {
               </p>
             </Card>
           </AdvancedAnalyticsGate>
+
+          {/* Placement — a recommendation, never a record of progress */}
+          <Card className="p-5">
+            <p className="flex items-center gap-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
+              <Icon name="explore" size={14} />
+              Placement
+            </p>
+            {placement ? (
+              <>
+                <h3 className="mt-2 font-heading text-title-md text-on-surface">
+                  {PLACEMENT_LEVEL_LABEL[placement.level] ?? 'Assessed'}
+                </h3>
+                <p className="mt-1 font-body-sm text-on-surface-variant">
+                  {placement.correctCount} of {placement.totalCount} correct.
+                  {placementModule ? ` Recommended start: ${placementModule.title}.` : ''}
+                </p>
+                {placementModule && (
+                  <Button
+                    to={`/curriculum/${placementModule.slug}`}
+                    className="mt-4 w-full"
+                    icon="play_arrow"
+                  >
+                    Continue from your placement
+                  </Button>
+                )}
+                <Button to="/placement" variant="ghost" className="mt-2 w-full" icon="refresh">
+                  Retake assessment
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="mt-2 font-heading text-title-md text-on-surface">
+                  Not sure where to start?
+                </h3>
+                <p className="mt-1 font-body-sm text-on-surface-variant">
+                  Answer a short set of questions and JSPath will recommend a starting point.
+                  Nothing gets locked or skipped.
+                </p>
+                <Button to="/placement" variant="secondary" className="mt-4 w-full" icon="explore">
+                  Take the placement assessment
+                </Button>
+              </>
+            )}
+          </Card>
 
           {/* Daily challenge */}
           {daily && (

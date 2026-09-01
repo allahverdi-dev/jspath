@@ -276,6 +276,81 @@ export const SHEET_GROUP = Object.freeze({
 });
 export const SHEET_GROUPS = Object.values(SHEET_GROUP);
 
+/**
+ * Placement assessment domains.
+ *
+ * A domain is a band of the curriculum, not a track: it declares the topics it
+ * covers and nothing else. The modules a domain maps to, and the order the
+ * domains are visited in, are both derived from the real curriculum registry
+ * (`module.order`) rather than restated here — there is exactly one curriculum
+ * ordering in this codebase and it lives in the content.
+ */
+export const PLACEMENT_DOMAIN = Object.freeze({
+  FOUNDATIONS: 'foundations',
+  CORE_LANGUAGE: 'core-language',
+  BROWSER_DOM: 'browser-dom',
+  ASYNC: 'async',
+  ADVANCED_LANGUAGE: 'advanced-language',
+  ENGINEERING: 'engineering',
+});
+export const PLACEMENT_DOMAINS = Object.values(PLACEMENT_DOMAIN);
+
+export const PLACEMENT_DOMAIN_LABEL = {
+  [PLACEMENT_DOMAIN.FOUNDATIONS]: 'Foundations',
+  [PLACEMENT_DOMAIN.CORE_LANGUAGE]: 'Core language',
+  [PLACEMENT_DOMAIN.BROWSER_DOM]: 'Browser & DOM',
+  [PLACEMENT_DOMAIN.ASYNC]: 'Async',
+  [PLACEMENT_DOMAIN.ADVANCED_LANGUAGE]: 'Advanced language',
+  [PLACEMENT_DOMAIN.ENGINEERING]: 'Engineering',
+};
+
+/** Which topics each domain is responsible for. Every id must exist in topics.js. */
+export const PLACEMENT_DOMAIN_TOPICS = Object.freeze({
+  [PLACEMENT_DOMAIN.FOUNDATIONS]: ['variables', 'types', 'coercion', 'operators', 'booleans', 'control-flow', 'loops'],
+  [PLACEMENT_DOMAIN.CORE_LANGUAGE]: ['strings', 'numbers', 'arrays', 'array-methods', 'objects', 'object-utilities', 'destructuring', 'functions', 'arrow-functions', 'higher-order', 'scope', 'hoisting'],
+  [PLACEMENT_DOMAIN.BROWSER_DOM]: ['dom', 'dom-manipulation', 'events', 'forms', 'storage', 'web-apis'],
+  [PLACEMENT_DOMAIN.ASYNC]: ['async-foundations', 'promises', 'async-await', 'event-loop', 'http'],
+  [PLACEMENT_DOMAIN.ADVANCED_LANGUAGE]: ['modern-js', 'modules', 'this', 'prototypes', 'classes', 'closures', 'data-structures', 'copying', 'iterators'],
+  [PLACEMENT_DOMAIN.ENGINEERING]: ['errors', 'debugging', 'testing', 'performance', 'security', 'algorithms'],
+});
+
+/**
+ * Placement result bands.
+ *
+ * These are deliberately the *same* four ids the onboarding level step already
+ * uses (`src/pages/OnboardingLevel.jsx`), so the assessment refines the
+ * learner's self-reported level instead of introducing a rival vocabulary.
+ */
+export const PLACEMENT_LEVEL = Object.freeze({
+  ZERO: 'zero',
+  BASICS: 'basics',
+  INTERMEDIATE: 'intermediate',
+  EXPERIENCED: 'experienced',
+});
+export const PLACEMENT_LEVELS = Object.values(PLACEMENT_LEVEL);
+
+export const PLACEMENT_LEVEL_LABEL = {
+  [PLACEMENT_LEVEL.ZERO]: 'Starting out',
+  [PLACEMENT_LEVEL.BASICS]: 'Knows the basics',
+  [PLACEMENT_LEVEL.INTERMEDIATE]: 'Comfortable with JavaScript',
+  [PLACEMENT_LEVEL.EXPERIENCED]: 'Experienced developer',
+};
+
+/**
+ * Difficulty weights used by placement scoring.
+ *
+ * A small, explicit progression — not a tuned curve. The spread is deliberately
+ * narrow (1 → 3) so that a single expert question can never outweigh a whole
+ * foundational domain; scoring is per-domain first and overall second.
+ */
+export const PLACEMENT_DIFFICULTY_WEIGHT = Object.freeze({
+  beginner: 1,
+  easy: 1.5,
+  medium: 2,
+  hard: 2.5,
+  expert: 3,
+});
+
 /** Content kinds — used by search, bookmarks and the audit script. */
 export const CONTENT_KIND = Object.freeze({
   MODULE: 'module',

@@ -71,6 +71,8 @@ export function AppRouter() {
       <Route path="/onboarding/level" element={<Page element={<OnboardingLevel />} />} />
       <Route path="/onboarding/goals" element={<Page element={<OnboardingGoals />} />} />
       <Route path="/onboarding/placement" element={<Page element={<Placement />} />} />
+      {/* The same assessment outside the onboarding flow, for retakes. Free for everyone. */}
+      <Route path="/placement" element={<Page element={<Placement />} />} />
 
       {/* Distraction-free reading and sessions */}
       <Route element={<FocusLayout />}>

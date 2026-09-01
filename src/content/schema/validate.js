@@ -3,6 +3,7 @@ import {
   INTERVIEW_KINDS, INTERVIEW_LEVELS,
   REFERENCE_CATEGORIES, REFERENCE_ENVS,
   SHEET_CATEGORIES, SHEET_GROUPS,
+  PLACEMENT_DOMAINS, PLACEMENT_DOMAIN_TOPICS,
 } from './types.js';
 
 /* ------------------------------------------------------------------ *
@@ -482,6 +483,34 @@ export function validateCheatSheet(cs) {
   return e;
 }
 
+/**
+ * A placement assessment question.
+ *
+ * Placement reuses the quiz question shape wholesale — the objective kinds it
+ * needs already exist — and adds only the two fields placement scoring depends
+ * on: the domain it belongs to, and its difficulty. Everything else is checked
+ * by `validateQuizQuestion`, so there is one definition of a valid question.
+ */
+export function validatePlacementQuestion(q) {
+  const at = 'placement question ' + (q?.id ?? '<missing id>');
+  const e = validateQuizQuestion(q, at);
+
+  req(e, PLACEMENT_DOMAINS.includes(q?.domain), at + ': invalid domain "' + q?.domain + '"');
+  req(e, DIFFICULTY_ORDER.includes(q?.difficulty), at + ': invalid difficulty "' + q?.difficulty + '"');
+
+  // A question must be scored in a domain that actually owns its topics,
+  // otherwise the domain breakdown reports something the question never tested.
+  const owned = new Set(PLACEMENT_DOMAIN_TOPICS[q?.domain] ?? []);
+  for (const topic of q?.topicIds ?? []) {
+    req(e, owned.has(topic), at + ': topic "' + topic + '" is not owned by domain "' + q?.domain + '"');
+  }
+
+  if (q?.code !== undefined) {
+    req(e, isStr(q.code) && q.code.trim().length > 0, at + ': code block is present but empty');
+  }
+  return e;
+}
+
 export const VALIDATORS = {
   module: validateModule,
   lesson: validateLesson,
@@ -492,4 +521,5 @@ export const VALIDATORS = {
   interview: validateInterviewQuestion,
   reference: validateReference,
   cheatsheet: validateCheatSheet,
+  placement: validatePlacementQuestion,
 };

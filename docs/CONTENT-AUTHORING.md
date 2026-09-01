@@ -279,6 +279,45 @@ Cheat sheets are **Free**. They are absent from `PRO_CONTENT_IDS` in
 `src/features/billing/accessCatalog.js`, so `requiredPlanForContent` returns
 FREE for the whole kind. Two tests pin that allocation.
 
+## Placement questions
+
+Placement lives in `src/content/placement/*.js`, one file per domain, re-exported
+through `index.js`. It reuses the quiz question shape wholesale and adds only the
+two fields placement scoring needs:
+
+```js
+{
+  id: 'pq-fnd-03',
+  domain: D.FOUNDATIONS,          // PLACEMENT_DOMAIN
+  difficulty: DIFFICULTY.BEGINNER,
+  kind: K.OUTPUT,                 // QUIZ_KIND: single | multiple | trueFalse | output
+  topicIds: ['coercion', 'operators'],
+  prompt: 'What is logged?',
+  code: 'console.log("5" + 3);',
+  options: ['"53"', '8', 'NaN', 'A TypeError'],
+  correct: 0,
+  explanation: 'Why that is the answer, and why the near-misses are wrong.',
+}
+```
+
+Three rules the audit enforces beyond the quiz schema:
+
+- Every `topicIds` entry must be **owned by the question domain**
+  (`PLACEMENT_DOMAIN_TOPICS`). Scoring a question in a domain that does not own
+  its topic makes the domain breakdown report something it never tested.
+- Prompts are compared with their code, so `"What is logged?"` may repeat but the
+  same prompt with the same snippet may not.
+- A long prompt that matches an interview question or a lesson quiz is an error.
+  Placement may test the same concept, but it must be written for placement rather
+  than exported from somewhere else.
+
+**Authoring convention:** write the correct option **first**. `index.js` rotates
+each question's options by a hash of its id, so the shipped answer positions are
+distributed while the source stays reviewable — you can check an answer key by
+reading one line. The rotation is deterministic, not random.
+
+Anything you claim a snippet prints must be verified by running it.
+
 ## Rules the audit enforces
 
 - Every module must have at least one lesson.

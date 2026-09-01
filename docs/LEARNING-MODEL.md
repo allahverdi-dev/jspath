@@ -113,11 +113,26 @@ moving forward:
 Untouched topics are excluded from "weak" — you cannot be weak at something you have
 not started; that is simply the next thing to learn, which is a different list.
 
+## Placement
+
+Placement answers "where should I start?" and refuses to answer anything else. The
+rule is the **earliest meaningful gap after confirmed mastery**, not a module
+proportional to the total score — a learner can be 90% correct overall and still be
+missing a foundational prerequisite, and sending them somewhere advanced would waste
+their time. Domains are walked in curriculum order and the first below mastery wins.
+
+The ordering is derived from `module.order` in the content registry, so there is one
+curriculum order in the codebase rather than a second copy inside the engine. The
+self-reported level from onboarding is never an input to scoring; the assessment
+refines that claim rather than trusting it.
+
 ## What is deliberately not claimed
 
 - Open conceptual interview answers are **self-assessed** against an explicit
   key-points checklist. There is no AI grader, and pretending otherwise would give
   learners false confidence.
-- The placement check is ten sampled questions. It recommends a starting module and
-  says plainly that it is a sample, not a verdict.
+- The placement assessment is 42 purpose-written questions scored deterministically
+  by difficulty. It recommends a starting module, says plainly that it is a starting
+  point rather than a verdict, and marks nothing complete: a high score is evidence
+  for a recommendation, not a record of work done.
 - Nothing is ever locked. Module order is a recommended path, not a gate.

@@ -3,6 +3,7 @@ import {
   createInitialState, STATE_VERSION, visitLesson, completeLesson, recordExerciseAttempt,
   recordQuizAttempt, recordChallengeAttempt, toggleProjectMilestone, recordInterviewAnswer,
   toggleBookmark, updateSettings, updateProfile, currentStreak, logActivity, recordActivityDay,
+  savePlacement, clearPlacement,
 } from '../features/progress/progressEngine.js';
 import { syncAchievements } from '../features/achievements/achievements.js';
 import { contentIndex } from '../content/registry.js';
@@ -107,6 +108,14 @@ export function mergeStates(remote, local) {
       wrongCount: (r?.wrongCount ?? 0) + (q.wrongCount ?? 0),
     };
   }
+
+  // Placement: the newer of the two attempts wins. It is a single snapshot with
+  // no history to reconcile, so a guest who took the assessment before signing in
+  // does not lose their recommendation.
+  const placements = [out.placement, local.placement].filter(Boolean);
+  out.placement = placements.sort((a, b) =>
+    String(a.completedAt ?? '').localeCompare(String(b.completedAt ?? '')),
+  ).pop() ?? null;
 
   out.bookmarks = { ...out.bookmarks, ...local.bookmarks };
   out.achievements = { ...local.achievements, ...out.achievements };
@@ -224,6 +233,8 @@ export function UserStateProvider({ children }) {
       toggleBookmark: (kind, refId, meta) => apply((s) => toggleBookmark(s, kind, refId, meta)),
       updateSettings: (patch) => apply((s) => updateSettings(s, patch)),
       updateProfile: (patch) => apply((s) => updateProfile(s, patch)),
+      savePlacement: (placement) => apply((s) => savePlacement(s, placement)),
+      clearPlacement: () => apply((s) => clearPlacement(s)),
       markActive: () => apply((s) => recordActivityDay(s)),
       log: (entry) => apply((s) => logActivity(s, entry)),
       completeDailyChallenge: (dayKeyValue, challengeId) =>
