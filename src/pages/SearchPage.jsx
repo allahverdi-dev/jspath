@@ -4,6 +4,7 @@ import { search, groupResults, KIND_LABEL } from '../features/search/searchIndex
 import { Card, Icon, Badge, Input, EmptyState, Tabs } from '../components/ui/index.jsx';
 import { contentStats } from '../content/registry.js';
 import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 
 export default function SearchPage() {
   const [params, setParams] = useSearchParams();
@@ -62,11 +63,11 @@ export default function SearchPage() {
                     <Icon name={item.icon} size={18} className="mt-0.5 shrink-0 text-on-surface-variant" />
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="font-body-md font-medium text-on-surface">{item.title}</span>
+                        <span className="font-body-md font-medium text-on-surface"><InlineMarkup text={item.title} /></span>
                         {item.difficulty && <Badge tone="neutral">{item.difficulty}</Badge>}
                         <ContentAccessBadge kind={item.kind} id={item.id} />
                       </span>
-                      {item.description && <span className="mt-1 block line-clamp-2 font-body-sm text-on-surface-variant">{item.description}</span>}
+                      {item.description && <span className="mt-1 block line-clamp-2 font-body-sm text-on-surface-variant"><InlineMarkup text={item.description} /></span>}
                     </span>
                   </Card>
                 ))}

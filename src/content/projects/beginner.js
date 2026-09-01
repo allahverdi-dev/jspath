@@ -514,7 +514,7 @@ export const projects = [
       'Comfortable reading hours, minutes and seconds off a `Date` object.',
       'Knows `setInterval` and `clearInterval`.',
     ],
-    relatedLessons: ['l-m16-01', 'l-m33-01'],
+    relatedLessons: ['l-m16-01', 'l-m23-02'],
     relatedChallenges: ['ch-fund-clock'],
     objectives: [
       'Read the current time and format it correctly, including the 12-hour edge cases of midnight and noon.',

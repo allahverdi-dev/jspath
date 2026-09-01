@@ -13,6 +13,7 @@ import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx
 import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGate.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { FEATURE } from '../features/billing/plans.js';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 
 const STATUS_TABS = [
   { value: 'all', label: 'All' },
@@ -166,8 +167,8 @@ export default function PracticeHub() {
                       className={`mt-0.5 shrink-0 ${record?.solved ? 'text-success' : record?.attempts ? 'text-warning' : 'text-on-surface-variant'}`}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="font-body-md font-medium text-on-surface">{exercise.title}</span>
-                      <span className="mt-1 block line-clamp-2 font-body-sm text-on-surface-variant">{exercise.instructions}</span>
+                      <span className="font-body-md font-medium text-on-surface"><InlineMarkup text={exercise.title} /></span>
+                      <span className="mt-1 block line-clamp-2 font-body-sm text-on-surface-variant"><InlineMarkup text={exercise.instructions} /></span>
                       <span className="mt-2 flex flex-wrap items-center gap-2">
                         <DifficultyBadge difficulty={exercise.difficulty} />
                         <ContentAccessBadge kind="exercise" id={exercise.id} />

@@ -26,6 +26,38 @@ function lessonKeywords(lesson) {
   return parts.join(' ').toLowerCase().replace(/\s+/g, ' ').slice(0, 800);
 }
 
+/**
+ * Shorten authored text for a card without breaking its markup.
+ *
+ * Descriptions, prompts and instructions are authored with inline code spans.
+ * A plain `.slice()` can cut one in half, and the orphaned backtick then renders
+ * literally on every card and search result - the string is no longer valid
+ * markup. So after clipping we drop any trailing unpaired code span, then tidy
+ * the dangling word and punctuation the cut left behind.
+ */
+function clip(text, max) {
+  // A card has no room for a fenced block, and truncating one leaves a stray
+  // fence behind, so drop fences entirely before measuring.
+  const s = String(text ?? '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  if (s.length <= max) return s;
+  let out = s.slice(0, max);
+  // Trim to a word boundary first: this step can itself drop a backtick, so
+  // the parity repair has to come after it or it fixes the wrong string.
+  const lastSpace = out.lastIndexOf(' ');
+  if (lastSpace > max * 0.6) out = out.slice(0, lastSpace);
+  // Drop trailing unpaired markers: half a marker renders as a literal
+  // backtick or asterisk on the card. Repairing one can truncate away the
+  // other's partner, so repeat until both are balanced.
+  for (const marker of ['`', '**', '`', '**']) {
+    const n = out.split(marker).length - 1;
+    if (n % 2 !== 0) out = out.slice(0, out.lastIndexOf(marker));
+  }
+  return out.replace(/[\s,;:(*-]+$/, '').trimEnd();
+}
+
 const relPath = (entity) => (content.sourceOf.get(entity) ?? '').replace(/\\/g, '/');
 
 const manifest = {
@@ -86,7 +118,7 @@ const manifest = {
     topicIds: e.topicIds,
     lessonId: e.lessonId ?? null,
     moduleId: e.moduleId ?? null,
-    instructions: e.instructions.slice(0, 220),
+    instructions: clip(e.instructions, 220),
     source: relPath(e),
   })),
 
@@ -98,7 +130,7 @@ const manifest = {
     difficulty: ch.difficulty,
     xp: ch.xp,
     topicIds: ch.topicIds,
-    prompt: ch.prompt.slice(0, 240),
+    prompt: clip(ch.prompt, 240),
     source: relPath(ch),
   })),
 
@@ -107,7 +139,7 @@ const manifest = {
     slug: p.slug,
     title: p.title,
     difficulty: p.difficulty,
-    tagline: p.tagline ?? p.brief.slice(0, 160),
+    tagline: p.tagline ?? clip(p.brief, 160),
     topicIds: p.topicIds,
     estimatedHours: p.estimatedHours ?? null,
     milestoneCount: (p.milestones ?? []).length,

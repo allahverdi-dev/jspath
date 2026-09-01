@@ -26,6 +26,7 @@ const FREE_BENEFITS = [
   `${allocation.project.free} guided projects`,
   `${allocation.interview.free} interview questions`,
   `All ${allocation.reference.free} reference entries and all ${allocation.cheatsheet.free} cheat sheets`,
+  'Placement assessment to find your starting point',
   'JavaScript playground and basic progress tracking',
   'Cloud progress sync with a free account',
   'Bookmarks and achievements',

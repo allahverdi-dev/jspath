@@ -11,6 +11,7 @@ import { TRACK_LABEL } from '../content/schema/types.js';
 import { TOPIC_BY_ID } from '../content/topics.js';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGate.jsx';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 
 export default function ModuleDetail() {
   const { moduleSlug } = useParams();
@@ -104,7 +105,7 @@ export default function ModuleDetail() {
                           <span className="font-body-md font-semibold text-on-surface">{lesson.title}</span>
                           {!lessonUnlocked && <Badge tone="primary" icon="lock">Pro</Badge>}
                         </span>
-                        <span className="mt-1 block font-body-sm text-on-surface-variant">{lesson.description}</span>
+                        <span className="mt-1 block font-body-sm text-on-surface-variant"><InlineMarkup text={lesson.description} /></span>
                         <span className="mt-2 flex flex-wrap items-center gap-3 font-mono text-code-sm text-on-surface-variant">
                           <span className="flex items-center gap-1"><Icon name="schedule" size={13} />{lesson.estimatedMinutes} min</span>
                           {lesson.exerciseIds.length > 0 && (
@@ -132,7 +133,7 @@ export default function ModuleDetail() {
               {module.objectives.map((o, i) => (
                 <li key={i} className="flex items-start gap-2 font-body-sm text-on-surface-variant">
                   <Icon name="check" size={15} className="mt-0.5 shrink-0 text-primary-ink" />
-                  {o}
+                  <InlineMarkup text={o} />
                 </li>
               ))}
             </ul>

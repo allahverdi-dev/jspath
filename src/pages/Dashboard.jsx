@@ -18,6 +18,7 @@ import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { FEATURE } from '../features/billing/plans.js';
 import { PLACEMENT_LEVEL_LABEL } from '../content/schema/types.js';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 
 function greeting(date = new Date()) {
   const h = date.getHours();
@@ -222,7 +223,7 @@ export default function Dashboard() {
                     </div>
                     <p className="mt-3 font-body-md font-semibold text-on-surface">{rec.title}</p>
                     <ContentAccessBadge kind={rec.kind} id={rec.id} />
-                    <p className="mt-1 line-clamp-2 font-body-sm text-on-surface-variant">{rec.description}</p>
+                    <p className="mt-1 line-clamp-2 font-body-sm text-on-surface-variant"><InlineMarkup text={rec.description} /></p>
                     <p className="mt-3 flex items-center gap-1.5 font-body-sm text-primary-ink">
                       <Icon name="auto_awesome" size={13} />
                       {rec.reason}

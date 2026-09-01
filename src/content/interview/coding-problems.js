@@ -28,7 +28,7 @@ export const questions = [
     kind: K.CODING,
     topicIds: ['closures', 'functions', 'performance'],
     relatedLessons: ['l-m32-02'],
-    relatedChallenges: ['ch-hof-debounce'],
+    relatedChallenges: ['ch-fn-debounce'],
     code: [
       'const onSearch = debounce((query) => search(query), 300);',
       '',

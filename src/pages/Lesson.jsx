@@ -13,6 +13,7 @@ import { ContentSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
 import { SECTION } from '../content/schema/types.js';
 import { Logo } from '../layouts/AppShell.jsx';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 
 /**
  * The lesson reader — the screen learners spend most of their time in.
@@ -200,7 +201,7 @@ export default function Lesson() {
               {lesson.learningObjectives.map((objective, i) => (
                 <li key={i} className="flex items-start gap-2.5 font-body-md text-on-surface-variant">
                   <Icon name="check" size={16} className="mt-1 shrink-0 text-primary-ink" />
-                  {objective}
+                  <InlineMarkup text={objective} />
                 </li>
               ))}
             </ul>
@@ -264,7 +265,7 @@ export default function Lesson() {
                 {lesson.keyTakeaways.map((takeaway, i) => (
                   <li key={i} className="flex items-start gap-2.5 font-body-md text-on-surface-variant">
                     <Icon name="chevron_right" size={16} className="mt-1 shrink-0 text-primary-ink" />
-                    {takeaway}
+                    <InlineMarkup text={takeaway} />
                   </li>
                 ))}
               </ul>

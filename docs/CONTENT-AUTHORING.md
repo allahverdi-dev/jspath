@@ -318,6 +318,56 @@ reading one line. The rotation is deterministic, not random.
 
 Anything you claim a snippet prints must be verified by running it.
 
+## Cross-content rules
+
+The audit validates the content graph as well as each library, so these apply
+whenever you add or rename anything.
+
+**Relations are ids and must resolve.** Every entry in `relatedLessons`,
+`relatedChallenges`, `relatedReference`, `relatedEntries`, `prerequisites` (on a
+module or lesson) and `lessonIds` names real content. The audit fails on an
+unknown id, on the same neighbour listed twice, and on an entity that references
+itself.
+
+`project.prerequisites` is the exception: it is authored **prose**, not ids
+("Comfortable with template literals and basic string formatting."). Do not start
+putting content ids there.
+
+**Slugs are routes.** Every module, lesson, challenge, project, reference entry
+and cheat sheet needs a unique, lowercase, hyphenated slug. A missing or
+non-URL-safe slug is a page nobody can open.
+
+**The access catalog holds real ids.** `PRO_CONTENT_IDS` and
+`FREE_SAMPLE_CONTENT_IDS` are hand-maintained lists in
+`src/features/billing/accessCatalog.js`. A stale id there is invisible in the UI -
+the item silently stops being Pro - so the audit checks every id exists and no id
+is listed twice. It also enforces that every lesson keeps at least one Free
+exercise, so a Free learner is never left reading with nothing to practise.
+
+### Markup belongs in prose, not in labels
+
+Descriptions, summaries, prompts, instructions, objectives and quiz options are
+authored with inline code and bold, and every surface that shows them renders
+them through `InlineMarkup`.
+
+Titles and labels are different. A module title, a topic label, a challenge or
+project title and a cheat sheet title must be **plain text**, because they appear
+in `<option>` elements, aria labels and progress labels, where markup cannot
+render at all.
+
+Two deliberate exceptions, both pinned by tests:
+
+- `chooseImplementation` exercise options render verbatim in monospace. Their
+  backticks are real template-literal syntax, and rendering them as markup would
+  strip the very thing the learner is asked to compare.
+- Fenced blocks are stripped from card text by `clip()` in the manifest
+  generator - a card has no room for one, and half a fence renders as stray
+  backticks.
+
+If you shorten authored text anywhere, use `clip()` rather than `.slice()`: it
+trims to a word boundary and then repairs any code or bold marker the cut left
+unpaired.
+
 ## Rules the audit enforces
 
 - Every module must have at least one lesson.

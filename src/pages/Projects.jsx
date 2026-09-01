@@ -6,6 +6,7 @@ import { projects as allProjects } from '../content/registry.js';
 import { DIFFICULTY_ORDER } from '../content/schema/types.js';
 import { topicLabel } from '../content/topics.js';
 import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 
 export default function Projects() {
   const { state } = useUserState();
@@ -56,7 +57,7 @@ export default function Projects() {
                   </span>
                 </div>
                 <p className="font-heading text-title-md text-on-surface">{p.title}</p>
-                <p className="mt-1.5 line-clamp-3 font-body-sm text-on-surface-variant">{p.tagline}</p>
+                <p className="mt-1.5 line-clamp-3 font-body-sm text-on-surface-variant"><InlineMarkup text={p.tagline} /></p>
                 {p.topicIds?.length > 0 && (
                   <div className="mt-2.5 flex flex-wrap gap-1">
                     {p.topicIds.slice(0, 3).map((t) => (

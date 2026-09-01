@@ -8,6 +8,7 @@ import { Fragment, useMemo } from 'react';
  * which covers everything the curriculum actually needs:
  *
  *   ```lang…```  → a fenced code block
+ *   ``code``     → inline code that itself contains a backtick
  *   `code`       → inline code
  *   **bold**     → emphasis
  *   [text](url)  → link
@@ -21,7 +22,10 @@ import { Fragment, useMemo } from 'react';
  * anywhere — so authored content can never inject markup into the page.
  */
 
-const PATTERN = /(```[\s\S]*?```)|(`[^`]+`)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\([^)]+\))/g;
+// `` … `` comes before ` … ` so a span that itself contains a backtick — the
+// standard Markdown escape, used by the tagged-template content — is matched
+// whole instead of being read as two stray delimiters.
+const PATTERN = /(```[\s\S]*?```)|(``[\s\S]*?``)|(`[^`]+`)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\([^)]+\))/g;
 
 export function InlineMarkup({ text }) {
   const parts = useMemo(() => {
@@ -39,6 +43,9 @@ export function InlineMarkup({ text }) {
         // Drop the fences and an optional language tag on the opening line.
         const body = token.slice(3, -3).replace(/^[a-zA-Z0-9-]*\n/, '');
         out.push({ type: 'block', value: body.replace(/\n$/, '') });
+      } else if (token.startsWith('``')) {
+        // Markdown trims one padding space on each side of a `` span.
+        out.push({ type: 'code', value: token.slice(2, -2).replace(/^ | $/g, '') });
       } else if (token.startsWith('`')) {
         out.push({ type: 'code', value: token.slice(1, -1) });
       } else if (token.startsWith('**')) {

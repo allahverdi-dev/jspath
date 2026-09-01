@@ -448,8 +448,8 @@ export const MODULES = [
   },
   {
     id: 'm29', slug: 'this', order: 29, track: ADVANCED, difficulty: HARD,
-    title: 'The `this` Keyword',
-    shortTitle: '`this`',
+    title: 'The this Keyword',
+    shortTitle: 'this',
     description: 'Call-site binding rules, lost context, call/apply/bind, and why arrows are different.',
     icon: 'my_location',
     topicIds: ['this'],

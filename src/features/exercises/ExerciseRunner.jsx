@@ -7,6 +7,7 @@ import { runCode } from '../../services/sandbox/index.js';
 import { useUserState } from '../../state/UserStateProvider.jsx';
 import { EXERCISE_KIND } from '../../content/schema/types.js';
 import { ContentGate, ProPreview } from '../../components/billing/FeatureGate.jsx';
+import { InlineMarkup } from '../../components/learning/InlineMarkup.jsx';
 
 const CHOICE_KINDS = [
   EXERCISE_KIND.PREDICT_OUTPUT,
@@ -131,7 +132,7 @@ function AccessibleExerciseRunner({ exercise, onSolved, compact = false }) {
         </div>
       </div>
 
-      <p className="mb-4 font-body-md leading-7 text-on-surface-variant">{exercise.instructions}</p>
+      <p className="mb-4 font-body-md leading-7 text-on-surface-variant"><InlineMarkup text={exercise.instructions} /></p>
 
       {/* The code being reasoned about, for predict/fix exercises */}
       {exercise.code && (

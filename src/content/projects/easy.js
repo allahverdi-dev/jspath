@@ -24,7 +24,7 @@ export const projects = [
       'Comfortable with form events (`blur`, `submit`) and `event.preventDefault()`.',
       'Can write a simple regular expression for an email-shaped string.',
     ],
-    relatedLessons: ['l-m20-01', 'l-m16-01'],
+    relatedLessons: ['l-m20-01', 'l-m16-05'],
     relatedChallenges: ['ch-beg-password-rules', 'ch-rx-escape-and-highlight'],
     objectives: [
       'Validate each field independently with a rule and a specific error message, rather than one all-or-nothing check.',
@@ -308,7 +308,7 @@ export const projects = [
       'Comfortable with `setInterval`/`clearInterval` and reading time from `Date.now()`.',
       'Understands, at least roughly, that a page can be throttled or backgrounded and timers are not perfectly reliable.',
     ],
-    relatedLessons: ['l-m33-01', 'l-m16-01'],
+    relatedLessons: ['l-m23-02', 'l-m16-01'],
     relatedChallenges: ['ch-fund-clock'],
     objectives: [
       'Measure elapsed time from real timestamps rather than by counting interval ticks, so the display stays accurate under load.',

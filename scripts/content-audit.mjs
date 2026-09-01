@@ -13,8 +13,11 @@ import path from 'node:path';
 import { loadAllContent } from './lib/load-content.mjs';
 import { VALIDATORS, scanForPlaceholders } from '../src/content/schema/validate.js';
 import { SECTION, PLACEMENT_DOMAINS, PLACEMENT_DOMAIN_TOPICS } from '../src/content/schema/types.js';
+import { PRO_CONTENT_IDS, FREE_SAMPLE_CONTENT_IDS } from '../src/features/billing/accessCatalog.js';
+import { requiredPlanForContent } from '../src/features/billing/access.js';
 
 const errors = [];
+let stats_relations = 0;
 const warnings = [];
 
 const err = (msg, where) => errors.push(where ? `${msg}\n      ↳ ${where}` : msg);
@@ -330,6 +333,145 @@ checkUnique(content.placement, 'id', 'placement question');
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * Cross-content graph
+ * ------------------------------------------------------------------ *
+ * The checks above validate each library against itself. These validate the
+ * product as one graph: every relation that names an id must resolve, no entity
+ * may point at itself or list the same neighbour twice, and every routable
+ * entity must actually be reachable through the router's slug lookups.
+ *
+ * `project.prerequisites` is deliberately absent — it is authored prose ("comfortable
+ * with template literals"), not ids, and treating it as a relation would be wrong.
+ */
+{
+  const sets = {
+    module: moduleIds,
+    lesson: lessonIds,
+    exercise: exerciseIds,
+    challenge: challengeIds,
+    project: new Set(content.projects.map((p) => p.id)),
+    interview: new Set(content.interview.map((q) => q.id)),
+    reference: referenceIds,
+    cheatsheet: new Set(content.cheatSheets.map((cs) => cs.id)),
+  };
+
+  // [owning kind, items, field, target kind] — every id-bearing relation in the schemas.
+  const RELATIONS = [
+    ['interview', content.interview, 'relatedLessons', 'lesson'],
+    ['interview', content.interview, 'relatedChallenges', 'challenge'],
+    ['project', content.projects, 'relatedLessons', 'lesson'],
+    ['project', content.projects, 'relatedChallenges', 'challenge'],
+    ['reference', content.references, 'relatedLessons', 'lesson'],
+    ['reference', content.references, 'relatedEntries', 'reference'],
+    ['cheatsheet', content.cheatSheets, 'relatedLessons', 'lesson'],
+    ['cheatsheet', content.cheatSheets, 'relatedReference', 'reference'],
+    ['cheatsheet', content.cheatSheets, 'relatedChallenges', 'challenge'],
+    ['module', content.modules, 'prerequisites', 'module'],
+    ['module', content.modules, 'lessonIds', 'lesson'],
+    ['lesson', content.lessons, 'prerequisites', 'lesson'],
+  ];
+
+  let relations = 0;
+  for (const [kind, items, field, target] of RELATIONS) {
+    for (const item of items) {
+      const list = item[field];
+      if (list === undefined) continue;
+      if (!Array.isArray(list)) {
+        err(`${kind} ${item.id}.${field} must be an array`, src(item));
+        continue;
+      }
+      const seen = new Set();
+      for (const id of list) {
+        relations += 1;
+        if (!sets[target].has(id)) {
+          err(`${kind} ${item.id}.${field} links to unknown ${target} "${id}"`, src(item));
+        }
+        if (seen.has(id)) {
+          err(`${kind} ${item.id}.${field} lists "${id}" twice`, src(item));
+        }
+        seen.add(id);
+        if (kind === target && id === item.id) {
+          err(`${kind} ${item.id}.${field} references itself`, src(item));
+        }
+      }
+    }
+  }
+  stats_relations = relations;
+
+  // Routability: the router resolves these kinds by slug, so a missing or
+  // malformed slug is a page that cannot be opened however valid its content is.
+  for (const [kind, items] of [
+    ['module', content.modules],
+    ['lesson', content.lessons],
+    ['challenge', content.challenges],
+    ['project', content.projects],
+    ['reference', content.references],
+    ['cheatsheet', content.cheatSheets],
+  ]) {
+    for (const item of items) {
+      if (typeof item.slug !== 'string' || item.slug.length === 0) {
+        err(`${kind} ${item.id} has no slug and cannot be routed`, src(item));
+      } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.slug)) {
+        err(`${kind} ${item.id} has a slug that is not URL-safe: "${item.slug}"`, src(item));
+      }
+    }
+  }
+  // A lesson URL is /learn/<module slug>/<lesson slug>, so it needs both.
+  for (const l of content.lessons) {
+    const mod = content.modules.find((m) => m.id === l.moduleId);
+    if (mod && !mod.slug) err(`lesson ${l.id} cannot be routed: module ${mod.id} has no slug`, src(l));
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Access catalog
+ * ------------------------------------------------------------------ *
+ * The catalog is hand-maintained id lists. A stale id there is invisible in the
+ * UI — the item simply stops being Pro, or a "free sample" silently disappears —
+ * so it is exactly the kind of drift that needs a machine check.
+ */
+{
+  const byKind = {
+    exercise: exerciseIds,
+    challenge: challengeIds,
+    project: new Set(content.projects.map((p) => p.id)),
+    interview: new Set(content.interview.map((q) => q.id)),
+  };
+  for (const [label, catalog] of [
+    ['PRO_CONTENT_IDS', PRO_CONTENT_IDS],
+    ['FREE_SAMPLE_CONTENT_IDS', FREE_SAMPLE_CONTENT_IDS],
+  ]) {
+    for (const [kind, ids] of Object.entries(catalog)) {
+      const known = byKind[kind];
+      if (!known) {
+        err(`${label} names unknown content kind "${kind}"`);
+        continue;
+      }
+      const seen = new Set();
+      for (const id of ids) {
+        if (!known.has(id)) err(`${label}.${kind} lists "${id}", which is not real content`);
+        if (seen.has(id)) err(`${label}.${kind} lists "${id}" twice`);
+        seen.add(id);
+      }
+    }
+  }
+
+  // Free practice must survive the allocation: a lesson whose every exercise is
+  // Pro leaves a Free learner reading with nothing to do.
+  const byLesson = new Map();
+  for (const e of content.exercises) {
+    if (!e.lessonId) continue;
+    if (!byLesson.has(e.lessonId)) byLesson.set(e.lessonId, []);
+    byLesson.get(e.lessonId).push(e);
+  }
+  for (const [lessonId, list] of byLesson) {
+    if (!list.some((e) => requiredPlanForContent('exercise', e.id) === 'free')) {
+      err(`lesson ${lessonId} has ${list.length} exercises and every one of them is Pro`);
+    }
+  }
+}
+
 const stats = {
   modules: content.modules.length,
   modulesWithLessons: content.modules.filter((m) => m.lessonIds.length > 0).length,
@@ -346,6 +488,7 @@ const stats = {
   cheatSheets: content.cheatSheets.length,
   placementQuestions: content.placement.length,
   topics: content.topics.length,
+  crossContentRelations: stats_relations,
   estimatedMinutes: content.lessons.reduce((n, l) => n + (l.estimatedMinutes ?? 0), 0),
 };
 
@@ -402,6 +545,7 @@ const rows = [
   ['Cheat sheets', stats.cheatSheets],
   ['Placement questions', stats.placementQuestions],
   ['Topics tracked', stats.topics],
+  ['Cross-content relations', stats.crossContentRelations],
   ['Estimated learning time', `${Math.round(stats.estimatedMinutes / 60)}h`],
 ];
 for (const [label, value] of rows) {

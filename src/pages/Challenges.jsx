@@ -6,6 +6,7 @@ import { challenges as allChallenges, contentIndex } from '../content/registry.j
 import { dailyChallenge } from '../features/progress/recommendations.js';
 import { DIFFICULTY_ORDER } from '../content/schema/types.js';
 import { ContentAccessBadge } from '../components/billing/ContentAccessBadge.jsx';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 
 export default function Challenges() {
   const { state } = useUserState();
@@ -88,7 +89,7 @@ export default function Challenges() {
                   </span>
                 </div>
                 <p className="font-body-md font-semibold text-on-surface">{c.title}</p>
-                <p className="mt-1.5 line-clamp-3 flex-1 font-body-sm text-on-surface-variant">{c.prompt}</p>
+                <p className="mt-1.5 line-clamp-3 flex-1 font-body-sm text-on-surface-variant"><InlineMarkup text={c.prompt} /></p>
                 <div className="mt-4 flex items-center gap-2">
                   <Badge tone="neutral">{c.category}</Badge>
                   <Badge tone="primary">+{c.xp} XP</Badge>

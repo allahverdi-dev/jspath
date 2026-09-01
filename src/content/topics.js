@@ -57,7 +57,7 @@ export const TOPICS = [
   { id: 'event-loop', label: 'Event Loop', group: 'Asynchronous' },
 
   // Advanced
-  { id: 'this', label: 'The `this` Keyword', group: 'Advanced' },
+  { id: 'this', label: 'The this Keyword', group: 'Advanced' },
   { id: 'prototypes', label: 'Prototypes', group: 'Advanced' },
   { id: 'classes', label: 'Classes & OOP', group: 'Advanced' },
   { id: 'closures', label: 'Closures', group: 'Advanced' },

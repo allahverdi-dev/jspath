@@ -4,6 +4,7 @@ import { Button, Icon, Badge, ProgressBar, cx } from '../../components/ui/index.
 import { useUserState } from '../../state/UserStateProvider.jsx';
 import { QUIZ_KIND } from '../../content/schema/types.js';
 import { QUIZ_PASS_THRESHOLD } from '../progress/progressEngine.js';
+import { InlineMarkup } from '../../components/learning/InlineMarkup.jsx';
 
 /**
  * The quiz engine.
@@ -146,7 +147,7 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
             <div className="space-y-3">
               {missed.map((q) => (
                 <div key={q.id} className="rounded border border-outline-variant bg-surface-container px-4 py-3">
-                  <p className="font-body-sm font-medium text-on-surface">{q.prompt}</p>
+                  <p className="font-body-sm font-medium text-on-surface"><InlineMarkup text={q.prompt} /></p>
                   <p className="mt-1.5 font-body-sm text-success">
                     Correct answer:{' '}
                     {q.kind === QUIZ_KIND.MULTIPLE
@@ -184,7 +185,7 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
         {question.kind === QUIZ_KIND.OUTPUT && <Badge tone="warning">Predict the output</Badge>}
       </div>
 
-      <p className="mb-4 font-body-lg leading-7 text-on-surface">{question.prompt}</p>
+      <p className="mb-4 font-body-lg leading-7 text-on-surface"><InlineMarkup text={question.prompt} /></p>
 
       {question.code && (
         <div className="mb-5 overflow-hidden rounded border border-outline-variant bg-surface-container-lowest px-4 py-3">
@@ -218,7 +219,7 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
                 className="mt-0.5 accent-[rgb(var(--c-primary))]"
               />
               <span className="min-w-0 flex-1">
-                <span className="font-body-md text-on-surface">{option}</span>
+                <span className="font-body-md text-on-surface"><InlineMarkup text={option} /></span>
                 {/* Distractor rationale: why this specific option is wrong. */}
                 {isRevealed && question.optionExplanations?.[i] && (
                   <span

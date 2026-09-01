@@ -12,6 +12,7 @@ Status of each content pillar. Counts come from
 | Reference | **COMPLETE** | 213 entries |
 | Cheat sheets | **COMPLETE** | 30 sheets |
 | Placement assessment | **COMPLETE** | 42 questions |
+| Cross-content validation | **COMPLETE** | 1856 relations verified |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -155,16 +156,97 @@ object and requires `['placement']` to be the only key that changed.
   domain breakdown repeats each bar in words (Strong / Mixed / Focus area), so the
   result never depends on colour alone; the skip link is present.
 
+## Cross-content validation
+
+The libraries are individually complete; this phase verified they behave as one
+product. `npm run content:audit` now walks the whole content graph and the access
+catalog, and `src/tests/cross-content.test.js` holds the invariants as tests.
+
+**Scope checked** - 1856 id-bearing relations across 12 relation types, 59 topics
+against 9 tagged content kinds, every routable slug, the full access catalog, the
+search index, and the Pricing copy.
+
+### Defects found and fixed
+
+| # | Class | Defect | Fix |
+| --- | --- | --- | --- |
+| 1 | Broken relation | `iv-code-debounce.relatedChallenges` pointed at `ch-hof-debounce`, which does not exist (the real id is `ch-fn-debounce`). The audit never validated `interview.relatedChallenges`. | Corrected the id; the audit now validates every relation type. |
+| 2 | Wrong relation | `pr-form-validator` (topics: forms, **regex**) linked to `l-m16-01` *Dates and Timestamps*. Module 16 covers Dates **and** RegExp, and the link landed on the wrong half. | Re-pointed to `l-m16-05` *Regular Expressions: Fundamentals*. |
+| 3 | Progression | `pr-digital-clock` (beginner) and `pr-pomodoro-timer` (easy) linked to `l-m33-01` *Execution Contexts and the Call Stack*, which never mentions `setInterval`, while `l-m23-02` *Timers* teaches exactly what they need and comes ten modules earlier. | Re-pointed both to `l-m23-02`. |
+| 4 | Stale copy | Pricing listed every Free benefit except the Placement assessment, which had shipped as Free. | Added a Placement line to the Free list. |
+| 5 | Raw markup | Module `m29` title and the `this` topic **label** contained backticks. Labels appear in `<option>` elements and aria text, where markup can never render. | De-marked both to plain text. |
+| 6 | Raw markup | Search results, module and lesson lists, challenge and project cards, dashboard recommendations, practice cards, lesson objectives and takeaways, quiz prompts and options, and exercise instructions all printed authored inline code literally - the same strings their detail pages had always rendered correctly. 47 raw fragments on one search page alone. | Routed all of them through the existing `InlineMarkup`. |
+| 7 | Corrupted projection | `generate-manifest.mjs` shortened instructions, prompts and taglines with a plain `.slice()`, cutting inline code and bold runs in half. 35 card fields shipped with an orphan backtick, and one carried half a fenced block. | Added `clip()`, which drops fenced blocks, trims to a word boundary, then repairs unpaired markers. |
+| 8 | Renderer gap | `InlineMarkup` did not support the double-backtick code span, the standard Markdown escape for code that itself contains a backtick, so `ch-adv-tagged-template` rendered stray delimiters. | Added double-backtick support, matched before the single-backtick form. |
+
+### Verified clean, no action needed
+
+- **Ids and slugs** - every module, lesson, exercise, challenge, project,
+  interview question, reference entry, cheat sheet and placement question has a
+  unique id; every routable kind has a unique, URL-safe slug. No cross-file
+  duplication. Reference canonical names and cheat sheet titles are unique, and no
+  alias collides with another entry's canonical name.
+- **Topic taxonomy** - 0 invalid topic ids, 0 orphan topics, and every topic that
+  is assessed anywhere is taught in the curriculum first.
+- **Curriculum hierarchy** - `module.lessonIds` matches the lessons themselves in
+  order, every lesson belongs to exactly one module, the 214-entry global order is
+  duplicate-free, and no module lists a prerequisite that comes later.
+- **Access catalog** - all 160 Pro exercise ids and all 45 free-sample ids resolve
+  to real content, with no duplicates and no stale entries. Every one of the 214
+  lessons still has at least one Free exercise.
+- **Search** - every indexed entry resolves, each item is indexed exactly once, no
+  duplicate rows from alias indexing, and placement questions are correctly absent.
+- **Project prerequisites** are authored prose ("Comfortable with template
+  literals"), not ids. A test pins this so they are never resolved as content ids.
+
+### Coverage matrix
+
+All 59 topics are taught in the curriculum and carry exercises. Challenge coverage
+exists for every high-value practical area - types, strings, arrays, array methods,
+objects, functions, scope, closures, `this`, prototypes, classes, DOM, events,
+forms, async, promises, HTTP, event loop, algorithms and security.
+
+**Accepted gaps** (documented, not defects): `orientation`, `js-runtime`,
+`devtools`, `syntax`, `tooling` and `interview` have no coding challenges - they
+are orientation and conceptual topics where a challenge would be filler.
+`variables`, `hoisting` and `execution-context` are covered by exercises,
+interview questions and cheat sheets rather than standalone challenges, which
+suits concept-recall material.
+
+**Reported for a future content pass, not closed here**: `arrow-functions`,
+`destructuring`, `modern-js`, `modules` and `storage` have no dedicated challenge,
+though each is practised through adjacent topics (`higher-order`, `objects`,
+`arrays`) and through projects. Authoring new challenges was out of scope for a
+validation phase.
+
+### Cross-content verification
+
+- **Cross-content tests**: 84. Full suite **348 passed** (17 files), up from 264
+  with no existing test weakened.
+- **Audit**: 1856 relations, 0 broken references, 0 warnings. The new checks were
+  proven to fire by injecting synthetic defects - a dead id, a duplicate neighbour
+  and a stale catalog id - and confirming each was reported.
+- **UI smoke test**: every major content system rendered - curriculum, module,
+  lesson, exercise, practice hub, challenge (Free and Pro gate), project (Free and
+  Pro gate), interview (Free and Pro gate), reference, cheat sheet, placement,
+  pricing, dashboard, my learning and search. No route errors, no dead links, no
+  raw markdown, correct Pro badges, fresh-tab console clean.
+- **Mobile**: 320px, 390px and desktop across lesson, challenge, project,
+  reference, cheat sheet, placement and pricing - zero page overflow, no
+  unscrollable code blocks or tables.
+- **Accessibility**: one `<main>` heading per page, no unnamed links, no images
+  missing alt text, lock affordances only on gated pages.
+
 ## Verification
 
 All gates green as of the last run:
 
 | Gate | Result |
 | --- | --- |
-| `npm run content:audit` | 0 broken references, 0 warnings |
+| `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 264 passed (16 files) |
+| `npm test` | 348 passed (17 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -195,10 +277,16 @@ closure (4), event (9), regex (14).
 - An in-progress placement attempt is held in component state, so a refresh
   mid-assessment restarts it. Nothing is corrupted and the restart is predictable;
   persisting partial attempts was judged not worth a new state shape.
+- Card text is shortened by `clip()` in the manifest generator, which drops fenced
+  blocks. A card therefore shows the prose of an instruction but never its code
+  block; the full text is always on the detail page.
+- `chooseImplementation` exercise options render verbatim in monospace, because
+  their backticks are real template-literal syntax rather than markup. Quiz options
+  are the opposite case and do render markup. A test pins the distinction.
 - The correct option is authored first in each domain file and rotated into place
   by a hash of the question id (`src/content/placement/index.js`). The rotation is
   deterministic, not random, so the assessment presents identically every run.
 
 ## Next phase
 
-**Cross-content validation.** Not started; no files written for it yet.
+**Final frontend / product QA.** Not started; no files written for it yet.
