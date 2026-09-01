@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Icon, Badge, EmptyState, Input, Tabs } from '../components/ui/index.jsx';
 import { cheatSheets } from '../content/registry.js';
+import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 
 export default function CheatSheets() {
@@ -66,7 +67,7 @@ export default function CheatSheets() {
             <Card key={cs.id} as={Link} to={`/cheat-sheets/${cs.slug}`} interactive className="flex flex-col p-5">
               <Icon name={cs.icon} size={22} className="text-primary-ink" />
               <p className="mt-3 font-heading text-title-md text-on-surface">{cs.title}</p>
-              <p className="mt-1.5 flex-1 font-body-sm text-on-surface-variant">{cs.description}</p>
+              <p className="mt-1.5 flex-1 font-body-sm text-on-surface-variant"><InlineMarkup text={cs.description} /></p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Badge tone="neutral">{cs.category}</Badge>
                 <Badge tone="neutral">{cs.entryCount} entries</Badge>

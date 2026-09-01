@@ -304,7 +304,7 @@ export default [
   {
     id: 'cs-this',
     slug: 'this-call-apply-bind',
-    title: '`this`, call, apply & bind',
+    title: 'this, call, apply & bind',
     category: C.FUNCTIONS,
     icon: 'my_location',
     aliases: ['this', 'call apply bind', 'binding', 'lost this', 'lexical this'],

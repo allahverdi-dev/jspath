@@ -148,7 +148,7 @@ it('pricing communicates exact allocation without fixing external Pro prices', (
   mount(<Pricing />);
   for (const text of ['650 exercises', '15 coding challenges', '5 guided projects', '25 interview questions', 'All 810 exercises', 'All 171 coding challenges', 'All 31 guided projects', 'All 312 interview questions']) expect(screen.getByText(text)).toBeInTheDocument();
   expect(screen.getByText('Complete 47-module JavaScript curriculum · all 214 lessons')).toBeInTheDocument();
-  expect(screen.getByText('All 213 reference entries and all 9 cheat sheets')).toBeInTheDocument();
+  expect(screen.getByText('All 213 reference entries and all 30 cheat sheets')).toBeInTheDocument();
   expect(screen.getByText('Flexible billing')).toBeInTheDocument();
   expect(screen.queryByText(/as content is tagged/)).not.toBeInTheDocument();
 });

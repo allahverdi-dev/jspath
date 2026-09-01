@@ -17,7 +17,7 @@ export default [
     category: C.LANGUAGE,
     icon: 'foundation',
     aliases: ['types', 'primitives', 'falsy', 'coercion', 'var let const', 'equality', 'typeof'],
-    topicIds: ['variables', 'types', 'coercion', 'operators', 'control-flow'],
+    topicIds: ['variables', 'types', 'coercion', 'operators', 'control-flow', 'booleans'],
     description: 'Declarations, the seven primitives, falsy values, equality, and the coercion traps that actually cost time.',
     groups: [
       {

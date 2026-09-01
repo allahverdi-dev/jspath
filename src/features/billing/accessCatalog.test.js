@@ -8,7 +8,7 @@ import { createInitialState, recordQuizAttempt } from '../progress/progressEngin
 import { topicMastery } from '../mastery/masteryEngine.js';
 
 const collections = { module: modules, lesson: lessons, exercise: exercises, challenge: challenges, project: projects, interview: interviewQuestions, reference: references, cheatsheet: cheatSheets };
-const expected = { module: [47, 0], lesson: [214, 0], exercise: [650, 160], challenge: [15, 156], project: [5, 26], interview: [25, 287], reference: [213, 0], cheatsheet: [9, 0] };
+const expected = { module: [47, 0], lesson: [214, 0], exercise: [650, 160], challenge: [15, 156], project: [5, 26], interview: [25, 287], reference: [213, 0], cheatsheet: [30, 0] };
 
 describe('approved allocation against the actual registry', () => {
   it.each(Object.entries(expected))('%s has its exact Free / Pro allocation', (kind, [free, pro]) => {

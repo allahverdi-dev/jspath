@@ -231,6 +231,54 @@ common mistakes, related APIs, then lessons and practice.
 `code`, `**bold**` (including bold wrapping code) and links. It does **not**
 support single-asterisk italics.
 
+## Cheat sheets
+
+Cheat sheets live in `src/content/cheat-sheets/*.js`. They answer a different
+question from the other kinds:
+
+| Kind | The question it answers |
+| --- | --- |
+| Curriculum | "Teach me this topic." |
+| Reference | "What exactly does this API do?" |
+| Cheat sheet | "Remind me of the syntax, rules and gotchas in 30 seconds." |
+
+So a sheet is compressed and scan-friendly: tables, rule lists and short
+snippets — never prose essays, never a second copy of the Reference.
+
+```js
+{
+  id: 'cs-events', slug: 'events', title: 'Events',
+  category: C.BROWSER,           // SHEET_CATEGORY
+  icon: 'touch_app',
+  aliases: ['bubbling', 'delegation'],   // fed into global search
+  topicIds: ['events'],
+  description: 'One-line scan of what the sheet covers.',
+  groups: [
+    { title: 'Phases', kind: G.TABLE, columns: ['Phase', 'Order'], rows: [[...]], note: '...' },
+    { title: 'Rules',  kind: G.RULES, items: ['`stopPropagation` does **not** ...'] },
+    { title: 'Delegation', kind: G.SNIPPETS, entries: [{ code: '...', description: '...' }] },
+  ],
+  relatedLessons: ['l-m18-01'],
+  relatedReference: ['ref-addeventlistener'],
+  relatedChallenges: ['ch-evt-delegation'],
+}
+```
+
+Three group kinds are available: `TABLE` (needs at least two columns, and every
+row must have one cell per column), `RULES` (a list of strings) and `SNIPPETS`
+(entries of `{ code, description }`).
+
+Titles, descriptions, notes, rule items, table headers and table cells all pass
+through `InlineMarkup`, so backticks and `**bold**` render. Snippet `code` does
+**not** — it is syntax-highlighted verbatim, so never put markdown inside it.
+
+Every id in `relatedLessons` / `relatedReference` / `relatedChallenges` must
+resolve to real content; the audit fails on invented ids.
+
+Cheat sheets are **Free**. They are absent from `PRO_CONTENT_IDS` in
+`src/features/billing/accessCatalog.js`, so `requiredPlanForContent` returns
+FREE for the whole kind. Two tests pin that allocation.
+
 ## Rules the audit enforces
 
 - Every module must have at least one lesson.
