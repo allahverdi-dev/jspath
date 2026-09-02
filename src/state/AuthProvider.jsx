@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import * as supa from '../services/supabase.js';
+import { clearPremiumCache } from '../services/premiumContent.js';
 
 const AuthContext = createContext(null);
 
@@ -53,6 +54,10 @@ export function AuthProvider({ children }) {
 
     const unsubscribe = supa.onAuthChange((s) => {
       if (!cancelled) {
+        // Paid payloads are cached per user in memory. Dropping the cache on any
+        // identity change means a sign-out, a token loss or an account switch can
+        // never serve one learner's authorised content to the next.
+        clearPremiumCache();
         setSession(s);
         setLoading(false);
       }
@@ -68,7 +73,10 @@ export function AuthProvider({ children }) {
   const signInWithGitHub = useCallback((redirectPath) => supa.signInWithGitHub(redirectPath), []);
   const signOut = useCallback(async () => {
     const result = await supa.signOut();
-    if (!result.error) setSession(null);
+    if (!result.error) {
+      clearPremiumCache();
+      setSession(null);
+    }
     return result;
   }, []);
 

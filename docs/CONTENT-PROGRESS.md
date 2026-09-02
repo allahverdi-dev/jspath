@@ -14,6 +14,7 @@ Status of each content pillar. Counts come from
 | Placement assessment | **COMPLETE** | 42 questions |
 | Cross-content validation | **COMPLETE** | 1856 relations verified |
 | Final frontend / product QA | **COMPLETE** | 35 routes, 12 flows, 4 defects fixed |
+| Product completion / production readiness | **COMPLETE** | premium payload protected, RLS captured, headers shipped |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -335,6 +336,144 @@ buttons carry descriptive `aria-label`s and `aria-pressed`, every page has one
 - One full-suite run showed a single failure with no printed detail, consistent
   with a timeout under load; two subsequent runs were clean at 419/419.
 
+## Product completion / production readiness
+
+The question this phase asked was narrow: what actually stands between the
+repository and a safe release? Three things did.
+
+### P0 — premium content was public
+
+The whole paid library shipped inside the client bundle. A marker search against
+the built assets found Pro challenge solutions in `content-challenges-*.js`, Pro
+exercise solutions in the curriculum chunks, and every Pro interview answer in
+`content-interview-*.js`. Anyone could have read all 629 paid items out of the
+static JavaScript.
+
+**What was done.** The paid half of every Pro item is now removed at build time
+and served from an authenticated Edge Function instead.
+
+- `src/features/billing/premiumFields.js` is the single definition of what counts
+  as paid. Discovery metadata — title, slug, difficulty, topic, the statement of
+  the task — stays public; solutions, graded tests, hints, answer keys and paid
+  build guidance do not.
+- `scripts/vite-plugin-premium.mjs` strips those fields during `vite build` only.
+  Source files are untouched, so `content:audit`, `content:verify`,
+  `content:examples`, the registry, search and local development all behave
+  exactly as before.
+- `scripts/build-premium-payload.mjs` (`npm run content:premium`) writes the
+  removed fields to `supabase/functions/premium-content/payload.json`, which
+  deploys with the function and is never visible to Vite.
+- `supabase/functions/premium-content/` verifies the caller's token, reads their
+  subscriptions with the service role, applies the same entitlement rule the
+  browser uses, and only then returns the payload. Nothing in the request body
+  influences that decision.
+- `src/services/premiumContent.js` fetches it, caches in memory only, partitioned
+  by user id, and is cleared on every identity change and on sign-out.
+
+**Measured result.**
+
+| | before | after |
+| --- | --- | --- |
+| Pro challenge solutions in the bundle | 156 / 156 | **0 / 156** |
+| Free challenge solutions in the bundle | 15 / 15 | 15 / 15 |
+| Pro challenge titles (discovery) | 156 | 156 |
+| `content-challenges` chunk | 743 KB | **210 KB** |
+| `content-interview` chunk | 849 KB | **170 KB** |
+
+3149 paid fields across 629 Pro items are withheld. The build prints the count,
+and CI re-runs the delivery tests against the freshly built `dist` so a
+regression fails the pipeline rather than shipping.
+
+Residual matches for a handful of Pro bodies were traced and are **not leaks**:
+they are passages that also appear in a free lesson or cheat sheet teaching the
+same idea, which is public by allocation.
+
+### P0 — `user_progress` had no migration
+
+The table holding every learner's private progress existed only as SQL pasted by
+hand into `docs/SUPABASE.md`. `supabase db push` would not have created it, and
+nothing in the repository proved RLS was enabled on it.
+
+`supabase/migrations/202609020001_user_progress.sql` now captures the table and
+its four owner-only policies, written to converge safely on a project where the
+table already exists.
+
+### P1 — no security headers
+
+`vercel.json` carried rewrites and nothing else. It now sets a Content-Security-
+Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy` and HSTS, plus cache rules for hashed assets.
+
+The CSP was built empirically — the real build served with the real headers —
+which caught three defects that reasoning alone had missed:
+
+1. Monaco is CDN-loaded from jsDelivr; the first policy blocked it and the editor
+   silently degraded to the plain-textarea fallback.
+2. Google Fonts and the Material Symbols icon font were blocked, which would have
+   shipped a site with no icons.
+3. The DOM sandbox timed out. A `srcdoc` iframe with `sandbox="allow-scripts"`
+   has an opaque origin, so `'self'` matches nothing and its bootstrap script was
+   refused.
+
+The final policy is verified end to end: Monaco loads, fonts and icons render,
+both sandbox hosts execute, and the console is clean.
+
+`script-src` permits `'unsafe-inline'` and `'unsafe-eval'` because running learner
+code *is* the product. That is a deliberate, documented trade: the app has no
+`dangerouslySetInnerHTML` and renders all content as React elements, and the rest
+of the policy — `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`,
+`form-action 'self'` and a tight `connect-src` — still does real work. Serving the
+sandbox document from its own origin would allow a stricter policy and is recorded
+in `docs/DEPLOYMENT.md` as a known improvement, not a blocker.
+
+### Verified clean, no action needed
+
+- **Secrets** — `.env` is gitignored and holds only public `VITE_*` values. No
+  service-role key, Gumroad token or webhook token appears in source, in frontend
+  environment variables or in the bundle.
+- **Webhook** — verifies its token server-side, allow-lists the resource type,
+  and de-duplicates through a `billing_events` ledger with a retry path for
+  previously failed events. It never trusts browser-supplied identity.
+- **Reconcile** — requires a verified JWT and a confirmed email, and matches the
+  Gumroad sale email against the authenticated user rather than anything in the
+  request body.
+- **Billing tables** — `subscriptions` is select-own-rows only with no client
+  write policy; `billing_events` is revoked from both roles entirely.
+- **Client XSS** — no `dangerouslySetInnerHTML` anywhere. The single `innerHTML`
+  is inside the null-origin sandbox iframe, which is the point of it. External
+  links carry `rel="noreferrer"`.
+- **Import** — cannot forge entitlement. Verified again after the architecture
+  change, in the running app: a state file declaring `plan: 'pro'` with a
+  fabricated active subscription left Pricing showing the upgrade CTA and a Pro
+  challenge fully gated.
+- **Source maps** — none are published, so nothing re-exposes the stripped bodies.
+- **CI** — already ran lint, tests, audit, verify, examples and build; it now also
+  builds the premium payload and re-checks the built bundle.
+
+### Tests
+
+`src/tests/premium-delivery.test.js` — 42 tests covering the server rule
+(unauthenticated, no subscription, active, canceling before and after period end,
+past due, expired, refunded, revoked, wrong product, invented status, missing
+date, unparseable date, malformed row), parity between the two entitlement
+implementations across every combination of plan, status, period end and
+verification, the split definition, the artifact's coverage and freshness, the
+built bundle, and cache partitioning by user.
+
+The Edge Function body runs in Deno and cannot execute here, so what is tested is
+the decision logic it imports and the artifacts it serves — not a mock standing in
+for either. The freshness guard was mutation-tested: corrupting one payload entry
+and adding an orphan both fail it.
+
+Full suite: **461 passed** across 21 files.
+
+### What must still be checked by hand
+
+`docs/DEPLOYMENT.md` lists the configuration this repository cannot verify —
+Supabase redirect URLs and RLS state, Edge Function secrets, the deploy ordering
+between `content:premium` and `functions deploy`, the Google and GitHub callback
+URLs, and the Gumroad webhook and product allowlist.
+
 ## Verification
 
 All gates green as of the last run:
@@ -344,7 +483,7 @@ All gates green as of the last run:
 | `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 419 passed (20 files) |
+| `npm test` | 461 passed (21 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -387,5 +526,5 @@ closure (4), event (9), regex (14).
 
 ## Next phase
 
-**Product completion** — the remaining `PRODUCT STATUS: INCOMPLETE` work across
-billing, auth and entitlements. Not started; no files written for it yet.
+**Localization / i18n** — English default, then Azerbaijani and Russian. Not
+started; no files written for it yet.

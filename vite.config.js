@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
+import { premiumContentPlugin } from './scripts/vite-plugin-premium.mjs';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [premiumContentPlugin(), react()],
   resolve: {
     alias: { '@': path.resolve(process.cwd(), 'src') },
   },

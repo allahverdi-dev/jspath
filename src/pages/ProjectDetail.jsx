@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getProject, projectBySlug, lessonById, moduleById, challengeById } from '../content/registry.js';
-import { Card, Button, Icon, Badge, DifficultyBadge, ProgressBar, EmptyState, Disclosure, SectionLabel, cx } from '../components/ui/index.jsx';
+import { Card, Button, Icon, Badge, DifficultyBadge, ProgressBar, Disclosure, SectionLabel, cx } from '../components/ui/index.jsx';
 import { ContentSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 import { HighlightedCode } from '../components/code/CodeBlock.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
 import { topicLabel } from '../content/topics.js';
+import { ContentLoadState } from '../components/feedback/ContentLoadState.jsx';
 
 export default function ProjectDetail() {
   const { slug } = useParams();
@@ -27,7 +28,7 @@ export default function ProjectDetail() {
   }, [meta]);
 
   if (error) {
-    return <EmptyState icon="search_off" title="Project not found" message={error.message} action={<Button to="/projects" icon="folder_open">All projects</Button>} />;
+    return <ContentLoadState error={error} kind="project" backTo="/projects" backLabel="All projects" />;
   }
   if (!project) return <ContentSkeleton lines={8} />;
 

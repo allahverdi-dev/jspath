@@ -61,6 +61,14 @@ vi.mock('../state/ToastProvider.jsx', () => ({ useToast: () => ({ show: () => {}
 
 const mount = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
+/**
+ * Starting a session dynamically imports the interview bodies. Under a loaded
+ * full-suite run that can take longer than the 1s `findBy*` default, which made
+ * this file fail intermittently in CI while passing on its own. The wait is
+ * generous rather than the assertions being weakened.
+ */
+const SETTLE = { timeout: 15_000 };
+
 beforeEach(() => {
   context.plan = 'pro';
   context.state = createInitialState();
@@ -103,7 +111,7 @@ describe('interview session flow', () => {
   it('shows a position counter and progress once started', async () => {
     const user = userEvent.setup({ delay: null });
     await start(user);
-    expect(await screen.findByText(/^1 \/ \d+$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^1 \/ \d+$/, undefined, SETTLE)).toBeInTheDocument();
     expect(screen.getByLabelText(/session progress/i)).toBeInTheDocument();
   });
 
@@ -115,11 +123,11 @@ describe('interview session flow', () => {
     await user.click(screen.getByRole('button', { name: /start session/i }));
 
     for (let i = 0; i < 5; i++) {
-      const next = await screen.findByRole('button', { name: /next question|finish session/i });
+      const next = await screen.findByRole('button', { name: /next question|finish session/i }, SETTLE);
       await user.click(next);
     }
 
-    expect(await screen.findByRole('heading', { name: /session complete/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /session complete/i }, SETTLE)).toBeInTheDocument();
     expect(screen.getByLabelText(/session score/i)).toBeInTheDocument();
   }, 30_000);
 
@@ -131,11 +139,11 @@ describe('interview session flow', () => {
 
     // Walk the whole session without answering anything at all.
     for (let i = 0; i < 5; i++) {
-      await user.click(await screen.findByRole('button', { name: /next question|finish session/i }));
+      await user.click(await screen.findByRole('button', { name: /next question|finish session/i }, SETTLE));
     }
 
     // Skipping never invents a score, and nothing was written to progress.
-    expect(await screen.findByRole('heading', { name: /session complete/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /session complete/i }, SETTLE)).toBeInTheDocument();
     expect(screen.getByText(/felt confident on 0/i)).toBeInTheDocument();
     expect(context.recorded).toEqual([]);
   }, 30_000);

@@ -4,7 +4,7 @@ import { getChallenge, challengeBySlug } from '../content/registry.js';
 import { CodeEditor } from '../components/code/CodeEditor.jsx';
 import { HighlightedCode } from '../components/code/CodeBlock.jsx';
 import { ConsoleOutput } from '../components/code/ConsoleOutput.jsx';
-import { Button, Icon, Badge, DifficultyBadge, Card, EmptyState, Disclosure, cx } from '../components/ui/index.jsx';
+import { Button, Icon, Badge, DifficultyBadge, Card, Disclosure, cx } from '../components/ui/index.jsx';
 import { ContentSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 import { runCode } from '../services/sandbox/index.js';
@@ -12,6 +12,7 @@ import { useUserState } from '../state/UserStateProvider.jsx';
 import { dayKey } from '../features/progress/progressEngine.js';
 import { dailyChallenge } from '../features/progress/recommendations.js';
 import { contentIndex } from '../content/registry.js';
+import { ContentLoadState } from '../components/feedback/ContentLoadState.jsx';
 
 export default function ChallengeDetail() {
   const { slug } = useParams();
@@ -54,7 +55,7 @@ export default function ChallengeDetail() {
   }, [challenge, code, actions]);
 
   if (error) {
-    return <EmptyState icon="search_off" title="Challenge not found" message={error.message} action={<Button to="/challenges" icon="trophy">All challenges</Button>} />;
+    return <ContentLoadState error={error} kind="challenge" backTo="/challenges" backLabel="All challenges" />;
   }
   if (!challenge) return <ContentSkeleton lines={8} />;
 

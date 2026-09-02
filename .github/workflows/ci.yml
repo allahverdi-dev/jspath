@@ -38,6 +38,12 @@ jobs:
       - name: Generate content manifest
         run: npm run content:manifest
 
+      # The premium payload is what the Edge Function serves. Building it here
+      # means the protected-content tests run against a real artifact, and that a
+      # content change which would leave a Pro item unserveable fails CI.
+      - name: Build premium payload
+        run: npm run content:premium
+
       - name: Lint
         run: npm run lint
 
@@ -55,3 +61,9 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+
+      # The build strips the paid half of Pro content. Re-running the delivery
+      # tests against the freshly built dist proves the bundle that would ship
+      # carries no Pro solutions, not merely that the stripper was configured.
+      - name: Verify the built bundle withholds premium content
+        run: npx vitest run src/tests/premium-delivery.test.js

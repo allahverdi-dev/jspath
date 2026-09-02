@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getInterviewQuestion, interviewById, lessonById, moduleById } from '../content/registry.js';
-import { Card, Button, Icon, EmptyState, SectionLabel } from '../components/ui/index.jsx';
+import { Card, Icon, SectionLabel } from '../components/ui/index.jsx';
 import { ContentSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { InterviewAnswer } from '../features/interview/InterviewAnswer.jsx';
+import { ContentLoadState } from '../components/feedback/ContentLoadState.jsx';
 
 export default function InterviewQuestionPage() {
   const { questionId } = useParams();
@@ -19,7 +20,7 @@ export default function InterviewQuestionPage() {
   }, [questionId]);
 
   if (error) {
-    return <EmptyState icon="search_off" title="Question not found" message={error.message} action={<Button to="/interview" icon="record_voice_over">Interview prep</Button>} />;
+    return <ContentLoadState error={error} kind="question" backTo="/interview" backLabel="Interview prep" />;
   }
   if (!question) return <ContentSkeleton lines={8} />;
 

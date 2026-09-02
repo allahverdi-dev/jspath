@@ -17,7 +17,8 @@
     "content:manifest": "node scripts/generate-manifest.mjs",
     "content:audit": "node scripts/content-audit.mjs",
     "content:verify": "node scripts/verify-solutions.mjs",
-    "content:examples": "node scripts/verify-examples.mjs"
+    "content:examples": "node scripts/verify-examples.mjs",
+    "content:premium": "node scripts/build-premium-payload.mjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getExercise, exerciseById, lessonById, moduleById } from '../content/registry.js';
 import { ExerciseRunner } from '../features/exercises/ExerciseRunner.jsx';
-import { Button, Icon, EmptyState, Card } from '../components/ui/index.jsx';
+import { Icon, Card } from '../components/ui/index.jsx';
 import { ContentSkeleton } from '../components/feedback/PageSkeleton.jsx';
+import { ContentLoadState } from '../components/feedback/ContentLoadState.jsx';
 
 export default function ExercisePage() {
   const { exerciseId } = useParams();
@@ -22,14 +23,7 @@ export default function ExercisePage() {
   }, [exerciseId]);
 
   if (error) {
-    return (
-      <EmptyState
-        icon="search_off"
-        title="Exercise not found"
-        message={error.message}
-        action={<Button to="/practice" icon="fitness_center">Back to practice</Button>}
-      />
-    );
+    return <ContentLoadState error={error} kind="exercise" backTo="/practice" backLabel="Back to practice" />;
   }
   if (!exercise) return <ContentSkeleton lines={8} />;
 
