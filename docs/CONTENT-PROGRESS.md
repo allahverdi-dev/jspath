@@ -13,6 +13,7 @@ Status of each content pillar. Counts come from
 | Cheat sheets | **COMPLETE** | 30 sheets |
 | Placement assessment | **COMPLETE** | 42 questions |
 | Cross-content validation | **COMPLETE** | 1856 relations verified |
+| Final frontend / product QA | **COMPLETE** | 35 routes, 12 flows, 4 defects fixed |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -237,6 +238,103 @@ validation phase.
 - **Accessibility**: one `<main>` heading per page, no unnamed links, no images
   missing alt text, lock affordances only on gated pages.
 
+## Final frontend / product QA
+
+Cross-content validation proved the content graph is coherent. This phase
+exercises the *application*: every route, state and flow as a user meets it.
+
+### Defects found and fixed
+
+| # | Severity | Defect | Fix |
+| --- | --- | --- | --- |
+| 1 | High | A **nonexistent** challenge, project or interview slug rendered "This … is included with Pro" — an upgrade wall for content that does not exist. `ContentRouteGate` passed `id={undefined}` into the gate, and `requiredPlanForContent` falls through to PRO for the three feature-gated kinds, so a stale bookmark or mistyped link asked the learner to pay for nothing. | The gate now lets an unresolved slug through so the page renders its own "not found", which all three pages already had. |
+| 2 | Low (latent) | `<Button>` rendered a bare `<button>`, which HTML defaults to `type="submit"`, while every other control in `ui/index.jsx` sets `type="button"`. Harmless today (no `<form>` elements exist) but it would submit the moment one was added. | Default to `type="button"`, still overridable through props. |
+| 3 | Medium | In **light theme** the streak flame was brand yellow on near-white: contrast **1.3**, effectively invisible. | Switched to the theme-aware `text-primary-ink` token: light 1.3 → **5.12** (AA), dark unchanged at 13.62. |
+| 4 | Medium | `PracticeSession` counted a solve on every passing run, so re-running one exercise inflated the total and the summary could claim more solved than the session contained. | Track solved **ids** rather than a counter. |
+
+A misleading test was also corrected. `router.access.test.jsx` asserted that an
+unknown premium slug should show the paywall ("fails closed for unknown
+premium-by-default route"), using a slug that does not exist. Its intent —
+content that exists but is missing from the catalog must default to Pro — is
+legitimate, so it was split into the two invariants it had conflated: the access
+layer still fails closed for an unlisted id, and the route layer 404s an unknown
+one. That file went from 38 to 42 tests.
+
+### Flows verified
+
+| Flow | Result |
+| --- | --- |
+| Interview session | Setup, start, progression, completion summary and score all work. Objective questions score on reveal, open questions only on self-rating, and both are single-fire by construction. Walking a session without answering records nothing and scores zero rather than inventing a grade. |
+| Practice session | Entitlement gated at the route; progression, completion, "run it again" and the solved count all correct after the dedupe fix. |
+| Project milestones | Driven live: five milestones toggled, XP awarded once each plus one completion award, completion only at 5/5, reopening un-completes, re-completing awards nothing further (275 → 275 XP), and state survives a refresh. |
+| Bookmarks | Add, reflect, remove, no duplicates, keyed by kind so two kinds sharing an id cannot collide, and curriculum progress untouched. |
+| Settings export/import | The export contains learning progress only — no plan, subscription, session or identity keys. Import is parsed inside a guard, and the sign-in merge normalises a partial remote record without losing local progress. |
+| Exercise runner | All three sandbox hosts exercised in the real browser (Worker, DOM iframe, async); every assertion passed. XP is awarded once no matter how often an exercise is re-run. |
+| Placement, search, curriculum, reference, cheat sheets | Covered in the first pass and re-checked here. |
+
+### The security invariant
+
+Importing hand-edited client state **cannot** buy Pro. Verified two ways: the
+entitlement resolver takes only `authenticated` and the subscription rows the
+server returned, never user state; and in the running app, a forged blob
+declaring `plan: 'pro'`, `isPro: true` and a fabricated active subscription left
+Pricing showing the upgrade CTA and left a Pro challenge fully gated. The forged
+keys survive in local storage as inert noise because nothing reads them.
+
+### Billing UI states
+
+| State | Behaviour |
+| --- | --- |
+| Guest | Pricing renders real allocation counts, offers account creation, gates Pro content. |
+| Free | Current-plan state, upgrade CTA, free samples open, Pro gated, no account-creation link. |
+| Active Pro | "Current plan" shown, premium content and sessions open, no upgrade prompt. |
+| Pending cancellation | The `canceling` status **retains Pro** until `current_period_end`; the plan UI does not contradict it and does not downgrade early. |
+| Past due | Retains Pro through the paid period rather than downgrading immediately. |
+| Expired / refunded / revoked | Premium denied, every free allocation still reachable, no stale Pro badge. Tested through fixtures — no real Gumroad lifecycle event was triggered. |
+
+### Accessibility
+
+Keyboard behaviour is proven in jsdom, which delivers real key events, against
+the primitives every screen is built from: buttons activate with Enter and
+Space, disabled buttons leave the tab order, the dialog exposes
+`role="dialog"`/`aria-modal` with an accessible name, closes on Escape, traps
+Tab, restores focus to its opener and restores background scroll, selects and
+inputs are labelled, toggles are switches carrying `aria-checked`, and tabs rove
+with Arrow/Home keys per the ARIA pattern. In the running app, project milestone
+buttons carry descriptive `aria-label`s and `aria-pressed`, every page has one
+`<main>` heading, no link lacks a name and no image lacks alt text.
+
+### Coverage
+
+- **Routes** — all 35 patterns including `*` → 404, plus a bad-param probe for
+  every parameterised route.
+- **Responsive** — 320px, 390px, 768px and desktop across lesson, challenge,
+  project, settings, pricing, cheat sheet, placement and the code editors. No
+  page-level horizontal overflow at any width; editors scroll inside themselves.
+- **Themes** — light and dark. With alpha correctly composited, 0 contrast
+  failures on curriculum, pricing, challenges, settings, my-learning and project
+  detail; the single dashboard failure is defect 3 above.
+- **Console** — fresh tabs traversing the app, including the three not-found
+  routes, produce zero errors.
+
+### Environmental limitations
+
+- The browser pane runs hidden. That throttles `setTimeout` to roughly one second
+  and does not reliably deliver synthesised keystrokes, so **typing into the code
+  editor could not be driven end to end**. The editor's input path is covered by
+  the existing component tests, the sandbox was exercised directly in the real
+  browser instead, and exercise correctness stays machine-verified by
+  `content:verify` (4561 assertions). Keyboard interaction is proven in jsdom
+  rather than by hand, as recorded above.
+- Long-lived dev tabs accumulate HMR context-identity errors (`useUserState must
+  be used inside UserStateProvider`, with mismatched `?t=` module timestamps).
+  These are a hot-reload artifact, not a product fault: a fresh tab is always
+  clean. Console verification therefore always uses a fresh tab.
+- Expired and revoked subscription states were exercised through fixtures. No
+  real Gumroad lifecycle event was triggered for QA.
+- One full-suite run showed a single failure with no printed detail, consistent
+  with a timeout under load; two subsequent runs were clean at 419/419.
+
 ## Verification
 
 All gates green as of the last run:
@@ -246,7 +344,7 @@ All gates green as of the last run:
 | `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 348 passed (17 files) |
+| `npm test` | 419 passed (20 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -289,4 +387,5 @@ closure (4), event (9), regex (14).
 
 ## Next phase
 
-**Final frontend / product QA.** Not started; no files written for it yet.
+**Product completion** — the remaining `PRODUCT STATUS: INCOMPLETE` work across
+billing, auth and entitlements. Not started; no files written for it yet.

@@ -138,7 +138,7 @@ function SidebarContent({ onNavigate, onClose }) {
         </Link>
         <div className="mb-2 flex items-center justify-between px-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
           <span className="flex items-center gap-1">
-            <Icon name="local_fire_department" size={13} filled className={streak > 0 ? 'text-primary' : ''} />
+            <Icon name="local_fire_department" size={13} filled className={streak > 0 ? 'text-primary-ink' : ''} />
             {streak} day{streak === 1 ? '' : 's'}
           </span>
           <span>{xp.toLocaleString()} XP</span>

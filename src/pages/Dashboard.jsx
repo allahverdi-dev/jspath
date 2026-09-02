@@ -112,7 +112,7 @@ export default function Dashboard() {
           <div className="text-center">
             <SectionLabel>Streak</SectionLabel>
             <p className="mt-0.5 flex items-center justify-center gap-1 font-heading text-headline-sm text-on-surface">
-              <Icon name="local_fire_department" size={20} filled className={streak > 0 ? 'text-primary' : 'text-on-surface-variant'} />
+              <Icon name="local_fire_department" size={20} filled className={streak > 0 ? 'text-primary-ink' : 'text-on-surface-variant'} />
               {streak}
             </p>
           </div>

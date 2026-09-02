@@ -62,8 +62,12 @@ export const Button = forwardRef(function Button(
     );
   }
   const Tag = as ?? 'button';
+  // A bare <button> defaults to type="submit", so the first time one of these is
+  // put inside a form every secondary action would submit it. Default to "button"
+  // like the other controls in this file; `rest` still lets a caller opt in.
+  const typeProp = Tag === 'button' ? { type: 'button' } : {};
   return (
-    <Tag ref={ref} className={classes} disabled={disabled || loading} {...rest}>
+    <Tag ref={ref} className={classes} disabled={disabled || loading} {...typeProp} {...rest}>
       {content}
     </Tag>
   );

@@ -58,9 +58,37 @@ describe('direct navigation uses exact content IDs, not broad feature access', (
     }
   }
 
-  it.each(['/challenges/not-yet-allocated', '/projects/not-yet-allocated', '/interview/question/not-yet-allocated'])('fails closed for unknown premium-by-default route %s', (path) => {
+  /**
+   * "Not yet allocated" and "does not exist" are two different things, and an
+   * earlier version of this test conflated them by using a slug that was not real.
+   *
+   * Content that exists but is missing from the free-sample catalog must fail
+   * closed to Pro — that is the guarantee that stops new content leaking out for
+   * free. It lives in the access layer, so it is asserted there, against ids the
+   * catalog has never seen.
+   */
+  it.each(['challenge', 'project', 'interview'])(
+    'fails closed to Pro for an unallocated %s id',
+    (kind) => {
+      expect(requiredPlanForContent(kind, 'id-the-catalog-has-never-seen')).toBe('pro');
+    },
+  );
+
+  /**
+   * A slug that resolves to nothing is a 404, not paid content. Gating it would
+   * ask a learner to pay for something that does not exist, so the route must
+   * reach the page and let it render its own "not found".
+   */
+  it.each([
+    ['/challenges/no-such-challenge', 'Challenge workspace'],
+    ['/projects/no-such-project', 'Project workspace'],
+    ['/interview/question/no-such-question', 'Question workspace'],
+    ['/practice/exercise/no-such-exercise', 'Exercise workspace'],
+  ])('routes unknown content %s to the page, not to an upgrade wall', async (path, heading) => {
+    entitlement.plan = 'guest';
     open(path);
-    expect(screen.getByRole('link', { name: 'View Pro options' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'View Pro options' })).not.toBeInTheDocument();
   });
 
   it.each([

@@ -58,7 +58,13 @@ function Page({ element }) {
 function ContentRouteGate({ kind, param, index, children, ...lockedProps }) {
   const params = useParams();
   const item = index[params[param]];
-  return <ContentGate kind={kind} id={item?.id} {...lockedProps}>{children}</ContentGate>;
+  // An unknown slug is a 404, not paid content. Passing `undefined` into the gate
+  // made `requiredPlanForContent` fall through to PRO for the feature-gated kinds,
+  // so a stale bookmark or a mistyped link asked the learner to pay for something
+  // that does not exist. Every detail page already renders its own "not found",
+  // so let the route through and allow the page to say so.
+  if (!item) return children;
+  return <ContentGate kind={kind} id={item.id} {...lockedProps}>{children}</ContentGate>;
 }
 
 export function AppRouter() {

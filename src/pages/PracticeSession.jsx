@@ -19,7 +19,10 @@ export default function PracticeSession() {
 
   const [exercises, setExercises] = useState(null);
   const [index, setIndex] = useState(0);
-  const [solved, setSolved] = useState(0);
+  // Ids rather than a counter: ExerciseRunner calls onSolved on every passing
+  // run, so re-running a solved exercise used to inflate the total and let the
+  // summary claim more solved than the session contained.
+  const [solvedIds, setSolvedIds] = useState(() => new Set());
 
   const selected = useMemo(() => {
     let pool = allExercises;
@@ -83,16 +86,16 @@ export default function PracticeSession() {
             <Icon name="check_circle" size={40} className="mx-auto text-success" filled />
             <h2 className="mt-4 font-heading text-headline-sm text-on-surface">Session complete</h2>
             <p className="mt-2 font-body-md text-on-surface-variant">
-              You solved {solved} of {exercises.length} exercises in this set.
+              You solved {solvedIds.size} of {exercises.length} exercises in this set.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button as={Link} to="/practice" icon="fitness_center">Back to Practice Hub</Button>
-              <Button variant="secondary" onClick={() => { setIndex(0); setSolved(0); }} icon="refresh">Run it again</Button>
+              <Button variant="secondary" onClick={() => { setIndex(0); setSolvedIds(new Set()); }} icon="refresh">Run it again</Button>
             </div>
           </Card>
         ) : (
           <>
-            <ExerciseRunner key={exercises[index].id} exercise={exercises[index]} onSolved={() => setSolved((s) => s + 1)} />
+            <ExerciseRunner key={exercises[index].id} exercise={exercises[index]} onSolved={(ex) => setSolvedIds((prev) => (prev.has(ex.id) ? prev : new Set(prev).add(ex.id)))} />
             <div className="mt-4 flex justify-end">
               <Button onClick={() => setIndex((i) => i + 1)} iconRight="arrow_forward">
                 {index < exercises.length - 1 ? 'Next exercise' : 'Finish session'}
