@@ -1,5 +1,6 @@
 import { EmptyState, Button } from '../ui/index.jsx';
 import { PREMIUM_STATUS } from '../../services/premiumContent.js';
+import { useLocation } from 'react-router-dom';
 import { useT } from '../../i18n/index.jsx';
 
 /**
@@ -16,6 +17,10 @@ import { useT } from '../../i18n/index.jsx';
  */
 export function ContentLoadState({ error, kind = 'content', backTo = '/dashboard', backLabel, onRetry }) {
   const t = useT();
+  const location = useLocation();
+  // Carry where they were, so signing in returns them here rather than to the
+  // dashboard. Encoded, and re-validated by /login before it is ever used.
+  const signInTo = `/login?next=${encodeURIComponent(location.pathname + location.search)}`;
   const status = error?.premiumStatus;
   // `kind` stays a stable internal token; only its display form is translated.
   const kindLabel = t(`billing.kind${kind[0].toUpperCase()}${kind.slice(1)}`);
@@ -38,7 +43,7 @@ export function ContentLoadState({ error, kind = 'content', backTo = '/dashboard
         icon="login"
         title={t('auth.signInToOpen')}
         message={t('auth.signInToOpenBody')}
-        action={<Button to="/login" icon="login">{t('auth.logIn')}</Button>}
+        action={<Button to={signInTo} icon="login">{t('auth.logIn')}</Button>}
       />
     );
   }

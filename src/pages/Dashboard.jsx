@@ -141,7 +141,7 @@ export default function Dashboard() {
       {isGuest && (
         <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-info/30 bg-info/5 px-4 py-3">
           <Icon name="info" size={18} className="text-info" />
-          <p className="min-w-0 flex-1 font-body-sm text-on-surface-variant">
+          <p className="min-w-0 flex-1 basis-64 font-body-sm text-on-surface-variant">
             {t('dashboard.guestNoticeBody')}
           </p>
           <Button to="/signup" size="sm" variant="secondary">{t('auth.createAccount')}</Button>

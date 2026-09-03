@@ -23,10 +23,18 @@ import { Fragment, useMemo } from 'react';
  *
  * The output is marked `lang="en"`. Every caller passes authored learning
  * content, which is canonical English inside an interface that may be running in
- * Azerbaijani or Russian; see `Authored.jsx` for why that marking matters. The
- * wrapper uses `display: contents` so it contributes the language and nothing
- * else — no box, no effect on the surrounding layout, which matters because this
- * renders inside paragraphs, list items and table cells alike.
+ * Azerbaijani or Russian; see `Authored.jsx` for why that marking matters.
+ *
+ * The wrapper is a real box, and deliberately so. Half of these call sites are a
+ * flex row — an icon, then the prose — and a wrapper that generates no box
+ * (`display: contents`, or the bare fragment this used to return) promotes every
+ * text run and every `<code>` span into a *separate flex item*. A sentence then
+ * lays out as a row of independently-shrinking columns with the row's `gap`
+ * between them, which is how "Can attach a `click` listener" turned into three
+ * ragged columns. One box keeps the prose in one inline formatting context.
+ *
+ * `min-w-0 flex-1` is inert inside a `<p>` and correct inside a flex row, so the
+ * same wrapper serves both without the component needing to know its context.
  */
 
 // `` … `` comes before ` … ` so a span that itself contains a backtick — the
@@ -34,8 +42,6 @@ import { Fragment, useMemo } from 'react';
 // whole instead of being read as two stray delimiters.
 const PATTERN = /(```[\s\S]*?```)|(``[\s\S]*?``)|(`[^`]+`)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\([^)]+\))/g;
 
-/* Carries the language without generating a box of its own. */
-const CONTENTS = { display: 'contents' };
 
 export function InlineMarkup({ text }) {
   const parts = useMemo(() => {
@@ -81,7 +87,7 @@ export function InlineMarkup({ text }) {
   }, [text]);
 
   return (
-    <span lang="en" style={CONTENTS}>
+    <span lang="en" className="min-w-0 flex-1">
       {parts.map((part, i) => {
         if (part.type === 'block') {
           return (

@@ -17,6 +17,7 @@ Status of each content pillar. Counts come from
 | Product completion / production readiness | **COMPLETE** | premium payload protected, RLS captured, headers shipped |
 | Localization / i18n | **COMPLETE** | all product chrome in en / az / ru, 912 strings |
 | Content-language boundary | **COMPLETE** | authored English marked `lang="en"` inside a translated UI |
+| Production defect remediation | **COMPLETE** | text fragmentation and auth-aware landing |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -658,7 +659,7 @@ All gates green as of the last run:
 | `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 597 passed (26 files) |
+| `npm test` | 635 passed (28 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -716,9 +717,9 @@ Two shared boundaries carry it, so the call sites barely changed:
 
 - **`InlineMarkup`** — every authored prose string in the app already flows
   through it (70 call sites). It now wraps its output in
-  `<span lang="en" style="display:contents">`: the language applies, no box is
-  generated, and layout is untouched. Verified: 0px overflow on lesson,
-  reference, cheat sheet and project pages, block code still block-level.
+  `<span lang="en">`: the language applies to all authored prose in one place.
+  (This wrapper originally used `display: contents`; the production defect pass
+  below changed it to a real box.)
 - **`Authored`** — a new one-line component for plain authored strings: titles,
   API names, categories, topic labels, milestone names, test names.
 
@@ -742,6 +743,79 @@ controls beside them still resolve to the UI locale. Console clean.
 `src/tests/content-language.test.jsx` (21) asserts both directions and that
 entitlement, ids, slugs and content are unchanged. Mutation-tested: removing
 `lang="en"` from `Authored` fails eight assertions.
+
+## Production defect remediation
+
+Two defects found by live smoke testing on https://jspath.vercel.app.
+
+### 1. Text fragmentation
+
+On Project Detail at constrained widths, words and inline code split absurdly:
+`querySelector` rendered as `querySel` / `ector`, `click` as `clic` / `k`, and
+"count" ran one letter per line across five lines. Two rules combined:
+
+- **`body { overflow-wrap: anywhere }`.** `anywhere` and `break-word` break the
+  same words, but `anywhere` additionally makes an element's *min-content* width a
+  single character. Every auto-sized flex and grid track was therefore free to
+  collapse to ~7px, and did. Changed to `break-word`, which keeps the longest word
+  in the intrinsic minimum — a column reserves the room a word needs, and a word
+  breaks only when it genuinely cannot fit.
+- **`InlineMarkup` generated no box.** Half its call sites are a flex row (icon,
+  then prose). With `display: contents` — and with the bare fragment before it —
+  every text run and every `<code>` became a *separate flex item*, so a sentence
+  laid out as a row of independently-shrinking columns with the row's `gap`
+  between them. It now renders one `<span class="min-w-0 flex-1">`: inert inside a
+  `<p>`, correct inside a flex row.
+
+A third, smaller instance: the dashboard guest notice used `flex-1` alone, which
+is `flex: 1 1 0%`. A zero basis never triggers the row's `flex-wrap`, so the
+paragraph shrank beside the icon and button until Russian words broke across three
+lines. Given a real `basis-64` it wraps onto its own line instead.
+
+Also added: `:not(pre) > code { word-break: normal }`, so inline code is treated
+as an identifier rather than a character stream.
+
+**Measured**, by Range-measuring every token on the page and reporting any whose
+client rects span more than one line:
+
+| | Before | After |
+| --- | --- | --- |
+| ProjectDetail @560px | "count" over 5 lines, 7px box; 81 of 161 runs under 40px | 0 broken words, 0 overflow |
+
+Swept ProjectDetail, ChallengeDetail, Lesson, ExercisePage, ReferenceDetail,
+CheatSheetDetail, InterviewQuestionPage, PracticeHub, Dashboard, Pricing and
+Settings at 320 / 390 / 560 / 768 / 1366 / 1920 in en, az and ru. The only
+remaining multi-line tokens are long code snippets inside line-clamped preview
+cards (`window.addEventListener("resize", …)` in a 223px column), which the brief
+explicitly allows to wrap at sensible opportunities.
+
+### 2. Landing still offered "Log in" to signed-in learners
+
+OAuth worked; the landing page did not know about it. It is the one screen
+reachable without the app shell, so it was the only place left rendering guest
+CTAs unconditionally. It now reads `isAuthenticated`, and — importantly —
+`loading`, so a restoring session shows a same-size placeholder instead of
+painting "Log in" and swapping it a moment later. The rest of the page never
+waits on auth.
+
+| State | Header | Hero / closing CTA |
+| --- | --- | --- |
+| Restoring | placeholder | placeholder |
+| Signed out | Log in · Start learning | Start from zero · Get started |
+| Signed in (free / active pro / canceling pro) | Dashboard · Profile | Continue learning |
+
+Pricing stays in the header for every state, so upgrade discovery is unchanged.
+
+### 3. OAuth return path
+
+Signing in from a gated page returned to `/dashboard` rather than the page the
+learner wanted. `/login` now reads `?next=` through `safeApplicationPath` — the
+same guard the upgrade flow uses, which keeps same-origin application paths and
+rejects absolute URLs, protocol-relative `//evil.test` and `javascript:` — and
+passes it to both providers and to the guest link. The gate that sends people to
+sign in now carries the current path. Opening `/login` directly still defaults to
+the dashboard, and an authenticated visitor to `/login` or `/signup` is redirected
+away rather than shown OAuth buttons.
 
 ## Next phase
 

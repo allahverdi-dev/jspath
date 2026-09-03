@@ -1,15 +1,27 @@
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { AuthLayout } from '../layouts/AuthLayout.jsx';
 import { Icon } from '../components/ui/index.jsx';
 import { OAuthButtons } from '../components/auth/OAuthButtons.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useT } from '../i18n/index.jsx';
+import { safeApplicationPath } from '../features/billing/plans.js';
 
 export default function Login() {
   const t = useT();
   const { loading, isAuthenticated, isConfigured } = useAuth();
+  const [params] = useSearchParams();
 
-  if (!loading && isAuthenticated) return <Navigate to="/dashboard" replace />;
+  /*
+   * Signing in from a gated page should return there, not dump the learner on the
+   * dashboard to find their way back. `safeApplicationPath` is the same guard the
+   * upgrade flow uses: it keeps same-origin application paths and rejects
+   * everything else — absolute URLs, protocol-relative "//evil.test" — so a
+   * crafted `?next=` cannot turn sign-in into an open redirect. Opening /login
+   * directly carries no destination and falls back to the dashboard.
+   */
+  const nextPath = safeApplicationPath(params.get('next'), '/dashboard');
+
+  if (!loading && isAuthenticated) return <Navigate to={nextPath} replace />;
 
   return (
     <AuthLayout
@@ -36,7 +48,7 @@ export default function Login() {
               {t('auth.guestNoticeUnconfigured')}
             </div>
           )}
-          <OAuthButtons redirectPath="/dashboard" guestPath="/dashboard" />
+          <OAuthButtons redirectPath={nextPath} guestPath={nextPath} />
         </>
       )}
     </AuthLayout>

@@ -13,12 +13,30 @@
     @apply bg-background text-on-surface font-body antialiased;
     font-size: 16px;
     overscroll-behavior-y: none;
-    overflow-wrap: anywhere;
+    /*
+     * `break-word`, never `anywhere`.
+     *
+     * Both break a long word that would otherwise overflow, but `anywhere` also
+     * tells the layout engine that the element's min-content width is a single
+     * character. Every auto-sized flex and grid track then happily collapses to
+     * ~7px, and prose is rendered one letter per line: "count" became five
+     * lines, "querySelector" became "querySel / ector". `break-word` keeps the
+     * longest word in the intrinsic minimum, so a column reserves the room a
+     * word actually needs and only breaks when a single word truly cannot fit.
+     */
+    overflow-wrap: break-word;
   }
 
   /* Let content columns shrink; code and tables scroll inside their own panels. */
   .grid > *, .flex > :where(div, section, article, main, aside, nav, form) { min-width: 0; }
   pre { max-width: 100%; overflow-wrap: normal; }
+
+  /*
+   * Inline code is an identifier: break it only as a last resort, and never
+   * inside a track that has collapsed. `querySelector` should wrap to the next
+   * line whole rather than split across two boxes.
+   */
+  :not(pre) > code { overflow-wrap: break-word; word-break: normal; }
   fieldset { min-width: 0; }
   img, video, iframe { max-width: 100%; }
   button, a, input, select, textarea { touch-action: manipulation; }

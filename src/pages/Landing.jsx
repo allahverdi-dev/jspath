@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Button, Icon, Card, Badge, SectionLabel } from '../components/ui/index.jsx';
+import { Button, Icon, Card, Badge, SectionLabel, Skeleton } from '../components/ui/index.jsx';
 import { Logo } from '../layouts/AppShell.jsx';
 import { contentStats } from '../content/registry.js';
 import { HighlightedCode } from '../components/code/CodeBlock.jsx';
 import { useT } from '../i18n/index.jsx';
+import { useAuth } from '../state/AuthProvider.jsx';
 
 /* Feature ids are stable; the copy comes from the dictionaries. */
 const FEATURES = [
@@ -31,6 +32,41 @@ const SAMPLE = [
 
 export default function Landing() {
   const t = useT();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  /*
+   * The landing page is the one screen a signed-in learner can reach that has no
+   * app shell, so it was the only place still asking them to "Log in" after they
+   * already had. `loading` is true only while the stored session is being
+   * restored; rendering a placeholder of the same size for that moment avoids
+   * showing a guest CTA and then swapping it, which is what makes a valid session
+   * look broken. Nothing else on the page waits for auth.
+   */
+  const authNav = (size) => {
+    if (authLoading) return <Skeleton className={size === 'sm' ? 'h-8 w-44' : 'h-10 w-full'} />;
+    if (isAuthenticated) {
+      return (
+        <>
+          <Button to="/dashboard" size={size} iconRight="arrow_forward">{t('nav.dashboard')}</Button>
+          <Button to="/profile" variant="ghost" size={size} icon="person">{t('nav.profile')}</Button>
+        </>
+      );
+    }
+    return (
+      <>
+        <Button to="/login" variant="secondary" size={size}>{t('auth.logIn')}</Button>
+        <Button to="/dashboard" size={size}>{t('dashboard.startLearning')}</Button>
+      </>
+    );
+  };
+
+  /* Signed-in learners are resuming, not starting. */
+  const primaryCta = (labelKey) => {
+    if (authLoading) return <Skeleton className="h-11 w-52" />;
+    return isAuthenticated
+      ? <Button to="/dashboard" size="lg" iconRight="arrow_forward">{t('dashboard.continueLearning')}</Button>
+      : <Button to="/onboarding/level" size="lg" iconRight="arrow_forward">{t(labelKey)}</Button>;
+  };
 
   return (
     <div className="safe-page safe-bottom min-h-screen bg-background">
@@ -42,8 +78,7 @@ export default function Landing() {
           <nav aria-label={t('nav.main')} className="ml-auto hidden items-center gap-2 sm:flex">
             <Button to="/curriculum" variant="ghost" size="sm">{t('learning.curriculum')}</Button>
             <Button to="/pricing" variant="ghost" size="sm">{t('nav.pricing')}</Button>
-            <Button to="/login" variant="secondary" size="sm">{t('auth.logIn')}</Button>
-            <Button to="/dashboard" size="sm">{t('dashboard.startLearning')}</Button>
+            {authNav('sm')}
           </nav>
           <details className="relative ml-auto sm:hidden">
             <summary className="touch-target flex cursor-pointer list-none items-center gap-2 rounded border border-outline-variant px-3 py-2 font-body-sm">
@@ -52,8 +87,7 @@ export default function Landing() {
             <nav aria-label={t('nav.mobileMain')} className="absolute right-0 top-full mt-2 grid w-56 max-w-[calc(100vw-2rem)] gap-2 rounded-lg border border-outline-variant bg-surface p-3 shadow-xl">
               <Button to="/curriculum" variant="ghost">{t('learning.curriculum')}</Button>
               <Button to="/pricing" variant="ghost">{t('nav.pricing')}</Button>
-              <Button to="/login" variant="secondary">{t('auth.logIn')}</Button>
-              <Button to="/dashboard">{t('dashboard.startLearning')}</Button>
+              {authNav('md')}
             </nav>
           </details>
         </div>
@@ -72,7 +106,7 @@ export default function Landing() {
                 {t('landing.subheadline')}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Button to="/onboarding/level" size="lg" iconRight="arrow_forward">{t('landing.startFromZero')}</Button>
+                {primaryCta('landing.startFromZero')}
                 <Button to="/curriculum" variant="secondary" size="lg" icon="school">{t('learning.browseCurriculum')}</Button>
               </div>
               <p className="mt-6 font-body-sm text-on-surface-variant">
@@ -125,7 +159,7 @@ export default function Landing() {
             {t('landing.ctaBody')}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button to="/onboarding/level" size="lg" iconRight="arrow_forward">{t('landing.getStarted')}</Button>
+            {primaryCta('landing.getStarted')}
             <Button to="/playground" variant="secondary" size="lg" icon="terminal">{t('landing.tryPlayground')}</Button>
           </div>
         </section>
