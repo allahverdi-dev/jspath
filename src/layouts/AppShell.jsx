@@ -6,6 +6,7 @@ import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { SearchOverlay } from '../features/search/SearchOverlay.jsx';
 import { useModalFocus } from '../hooks/useModalFocus.js';
+import { useI18n, useT } from '../i18n/index.jsx';
 
 /**
  * The application shell from the Stitch dashboard screen: a fixed 280px sidebar,
@@ -15,44 +16,50 @@ import { useModalFocus } from '../hooks/useModalFocus.js';
  * over primary navigation, matching the mobile dashboard export.
  */
 
+/**
+ * Navigation, as translation keys rather than finished strings.
+ *
+ * The route and the icon are stable product identity; only the label is
+ * language-dependent, so it is resolved at render time through `t`.
+ */
 const NAV_SECTIONS = [
   {
-    label: 'Main',
+    labelKey: 'nav.main',
     items: [
-      { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
-      { to: '/curriculum', icon: 'school', label: 'Learn' },
-      { to: '/practice', icon: 'fitness_center', label: 'Practice' },
-      { to: '/challenges', icon: 'trophy', label: 'Challenges' },
-      { to: '/projects', icon: 'folder_open', label: 'Projects' },
-      { to: '/playground', icon: 'terminal', label: 'Playground' },
+      { to: '/dashboard', icon: 'dashboard', labelKey: 'nav.dashboard' },
+      { to: '/curriculum', icon: 'school', labelKey: 'nav.learn' },
+      { to: '/practice', icon: 'fitness_center', labelKey: 'nav.practice' },
+      { to: '/challenges', icon: 'trophy', labelKey: 'nav.challenges' },
+      { to: '/projects', icon: 'folder_open', labelKey: 'nav.projects' },
+      { to: '/playground', icon: 'terminal', labelKey: 'nav.playground' },
     ],
   },
   {
-    label: 'Resources',
+    labelKey: 'nav.resources',
     items: [
-      { to: '/reference', icon: 'menu_book', label: 'JS Reference' },
-      { to: '/cheat-sheets', icon: 'description', label: 'Cheat Sheets' },
-      { to: '/interview', icon: 'record_voice_over', label: 'Interview Prep' },
-      { to: '/pricing', icon: 'workspace_premium', label: 'Pricing' },
+      { to: '/reference', icon: 'menu_book', labelKey: 'nav.reference' },
+      { to: '/cheat-sheets', icon: 'description', labelKey: 'nav.cheatSheets' },
+      { to: '/interview', icon: 'record_voice_over', labelKey: 'nav.interview' },
+      { to: '/pricing', icon: 'workspace_premium', labelKey: 'nav.pricing' },
     ],
   },
   {
-    label: 'Personal',
+    labelKey: 'nav.personal',
     items: [
-      { to: '/my-learning', icon: 'timeline', label: 'My Learning' },
-      { to: '/bookmarks', icon: 'bookmark', label: 'Bookmarks' },
-      { to: '/achievements', icon: 'military_tech', label: 'Achievements' },
+      { to: '/my-learning', icon: 'timeline', labelKey: 'nav.myLearning' },
+      { to: '/bookmarks', icon: 'bookmark', labelKey: 'nav.bookmarks' },
+      { to: '/achievements', icon: 'military_tech', labelKey: 'nav.achievements' },
     ],
   },
 ];
 
 /** Primary destinations for the mobile tab bar. */
 const MOBILE_NAV = [
-  { to: '/dashboard', icon: 'dashboard', label: 'Home' },
-  { to: '/curriculum', icon: 'school', label: 'Learn' },
-  { to: '/practice', icon: 'fitness_center', label: 'Practice' },
-  { to: '/playground', icon: 'terminal', label: 'Code' },
-  { to: '/profile', icon: 'person', label: 'Profile' },
+  { to: '/dashboard', icon: 'dashboard', labelKey: 'nav.home' },
+  { to: '/curriculum', icon: 'school', labelKey: 'nav.learn' },
+  { to: '/practice', icon: 'fitness_center', labelKey: 'nav.practice' },
+  { to: '/playground', icon: 'terminal', labelKey: 'nav.code' },
+  { to: '/profile', icon: 'person', labelKey: 'nav.profile' },
 ];
 
 export function Logo({ size = 'md', className = '' }) {
@@ -68,6 +75,7 @@ export function Logo({ size = 'md', className = '' }) {
 }
 
 function NavItem({ item, onNavigate }) {
+  const t = useT();
   return (
     <NavLink
       to={item.to}
@@ -92,7 +100,7 @@ function NavItem({ item, onNavigate }) {
             aria-hidden="true"
           />
           <Icon name={item.icon} size={20} filled={isActive} />
-          {item.label}
+          {t(item.labelKey)}
         </>
       )}
     </NavLink>
@@ -100,10 +108,12 @@ function NavItem({ item, onNavigate }) {
 }
 
 function SidebarContent({ onNavigate, onClose }) {
+  const t = useT();
+  const { formatNumber } = useI18n();
   const { state, streak, xp } = useUserState();
   const { isAuthenticated, displayName } = useAuth();
   const { isPro } = useEntitlements();
-  const name = isAuthenticated ? displayName : state.profile.displayName || 'Guest';
+  const name = isAuthenticated ? displayName : state.profile.displayName || t('auth.guest');
 
   return (
     <>
@@ -111,14 +121,14 @@ function SidebarContent({ onNavigate, onClose }) {
         <Link to="/dashboard" onClick={onNavigate} className="rounded">
           <Logo />
         </Link>
-        {onClose && <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close navigation menu" icon="close" />}
+        {onClose && <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('nav.closeMenu')} icon="close" />}
       </div>
 
-      <nav className="thin-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 py-4" aria-label="Main">
+      <nav className="thin-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 py-4" aria-label={t('nav.main')}>
         {NAV_SECTIONS.map((section) => (
-          <div key={section.label} className="space-y-0.5">
+          <div key={t(section.labelKey)} className="space-y-0.5">
             <p className="px-3 pb-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-              {section.label}
+              {t(section.labelKey)}
             </p>
             {section.items.map((item) => (
               <NavItem key={item.to} item={item} onNavigate={onNavigate} />
@@ -134,14 +144,14 @@ function SidebarContent({ onNavigate, onClose }) {
           className="mb-2 flex items-center justify-center gap-1.5 rounded border border-primary/30 bg-primary/5 px-3 py-2 font-body-sm font-semibold text-primary-ink transition hover:bg-primary/10"
         >
           <Icon name={isPro ? 'workspace_premium' : 'upgrade'} size={17} />
-          {isPro ? 'Pro · Manage plan' : 'Upgrade to Pro'}
+          {isPro ? t('billing.proManagePlan') : t('billing.upgrade')}
         </Link>
         <div className="mb-2 flex items-center justify-between px-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
           <span className="flex items-center gap-1">
             <Icon name="local_fire_department" size={13} filled className={streak > 0 ? 'text-primary-ink' : ''} />
-            {streak} day{streak === 1 ? '' : 's'}
+            {t('common.dayCount', { count: streak })}
           </span>
-          <span>{xp.toLocaleString()} XP</span>
+          <span>{t('common.xp', { count: formatNumber(xp) })}</span>
         </div>
         <Link
           to="/profile"
@@ -154,7 +164,9 @@ function SidebarContent({ onNavigate, onClose }) {
           <span className="min-w-0 flex-1">
             <span className="block truncate font-body-sm font-semibold text-on-surface">{name}</span>
             <span className="block truncate font-mono text-code-sm text-on-surface-variant">
-              {isPro ? 'Pro member' : isAuthenticated ? 'Free account' : 'Guest — progress saved locally'}
+              {isPro
+                ? t('billing.proMember')
+                : isAuthenticated ? t('billing.freeAccount') : t('auth.guestMode')}
             </span>
           </span>
           <Icon name="chevron_right" size={18} className="text-on-surface-variant" />
@@ -165,6 +177,7 @@ function SidebarContent({ onNavigate, onClose }) {
 }
 
 export function AppShell() {
+  const t = useT();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
@@ -196,7 +209,7 @@ export function AppShell() {
 
   return (
     <div className="safe-page min-h-screen bg-background">
-      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <a href="#main-content" className="skip-link">{t('nav.skipToContent')}</a>
 
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-sidebar-width flex-col border-r border-outline-variant bg-surface-container-lowest lg:flex">
@@ -217,7 +230,7 @@ export function AppShell() {
             className="drawer-panel absolute inset-y-0 left-0 flex w-[min(20rem,90vw)] flex-col border-r border-outline-variant bg-surface-container-lowest"
             role="dialog"
             aria-modal="true"
-            aria-label="Navigation menu"
+            aria-label={t('nav.openMenu')}
           >
             <SidebarContent onNavigate={() => setDrawerOpen(false)} onClose={() => setDrawerOpen(false)} />
           </aside>
@@ -230,7 +243,7 @@ export function AppShell() {
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="-ml-2 rounded p-2 text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface lg:hidden"
-            aria-label="Open navigation menu"
+            aria-label={t('nav.openMenu')}
             aria-expanded={drawerOpen}
           >
             <Icon name="menu" size={22} />
@@ -243,11 +256,11 @@ export function AppShell() {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            aria-label="Search JSPath"
+            aria-label={t('search.title')}
             className="ml-auto flex items-center gap-2 rounded border border-outline-variant bg-surface-container px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface lg:ml-0 lg:w-96"
           >
             <Icon name="search" size={18} />
-            <span className="hidden font-body-sm lg:inline">Search lessons, methods, questions…</span>
+            <span className="hidden font-body-sm lg:inline">{t('search.placeholder')}</span>
             <kbd className="ml-auto hidden rounded bg-surface-variant px-1.5 py-0.5 font-mono text-code-sm lg:inline">
               ⌘K
             </kbd>
@@ -257,12 +270,12 @@ export function AppShell() {
             <Link
               to="/settings"
               className="rounded p-2 text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface"
-              aria-label="Settings"
+              aria-label={t('nav.settings')}
             >
               <Icon name="settings" size={20} />
             </Link>
             <div className="h-6 w-px bg-outline-variant" aria-hidden="true" />
-            <Link to="/profile" className="grid h-8 w-8 place-items-center rounded-full bg-surface-container-highest" aria-label="Your profile">
+            <Link to="/profile" className="grid h-8 w-8 place-items-center rounded-full bg-surface-container-highest" aria-label={t('nav.profile')}>
               <Icon name="person" size={18} className="text-on-surface-variant" />
             </Link>
           </div>
@@ -278,7 +291,7 @@ export function AppShell() {
       {/* Mobile tab bar */}
       <nav
         className="safe-page safe-bottom fixed inset-x-0 bottom-0 z-30 flex border-t border-outline-variant bg-surface-container-lowest/95 backdrop-blur-xl lg:hidden"
-        aria-label="Primary"
+        aria-label={t('nav.primary')}
       >
         {MOBILE_NAV.map((item) => (
           <NavLink
@@ -294,7 +307,7 @@ export function AppShell() {
             {({ isActive }) => (
               <>
                 <Icon name={item.icon} size={22} filled={isActive} />
-                <span className="font-mono text-[10px] uppercase tracking-wide">{item.label}</span>
+                <span className="font-mono text-[10px] uppercase tracking-wide">{t(item.labelKey)}</span>
               </>
             )}
           </NavLink>
@@ -308,9 +321,11 @@ export function AppShell() {
 
 /** Distraction-free layout used by the lesson reader and interview sessions. */
 export function FocusLayout() {
+  const t = useT();
+
   return (
     <div className="safe-page safe-bottom min-h-screen bg-background">
-      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <a href="#main-content" className="skip-link">{t('nav.skipToContent')}</a>
       <Outlet />
     </div>
   );

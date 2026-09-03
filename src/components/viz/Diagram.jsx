@@ -580,7 +580,7 @@ export function Diagram({ id, caption }) {
   const { title, Component } = entry;
 
   return (
-    <figure className="rounded-lg border border-outline-variant bg-surface-container-low p-5">
+    <figure lang="en" className="rounded-lg border border-outline-variant bg-surface-container-low p-5">
       <figcaption className="mb-4 flex items-center gap-2">
         <Icon name="insights" size={16} className="text-on-surface-variant" />
         <span className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">{title}</span>

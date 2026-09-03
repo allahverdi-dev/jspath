@@ -2,6 +2,8 @@ import { forwardRef, useId, useRef, useState, createContext, useContext } from '
 import { Link } from 'react-router-dom';
 import { Icon } from './Icon.jsx';
 import { useModalFocus } from '../../hooks/useModalFocus.js';
+import { useT } from '../../i18n/index.jsx';
+import { DIFFICULTY_KEY, MASTERY_KEY } from '../../content/schema/types.js';
 
 export { Icon };
 
@@ -146,9 +148,10 @@ const DIFFICULTY_TONES = {
 };
 
 export function DifficultyBadge({ difficulty, ...rest }) {
+  const t = useT();
   return (
     <Badge tone={DIFFICULTY_TONES[difficulty] ?? 'neutral'} {...rest}>
-      {difficulty}
+      {DIFFICULTY_KEY[difficulty] ? t(DIFFICULTY_KEY[difficulty]) : difficulty}
     </Badge>
   );
 }
@@ -235,17 +238,18 @@ export function EmptyState({ icon = 'inbox', title, message, action, className =
   );
 }
 
-export function ErrorState({ title = 'Something went wrong', message, onRetry, className = '' }) {
+export function ErrorState({ title, message, onRetry, className = '' }) {
+  const t = useT();
   return (
     <div className={cx('rounded-lg border border-error/30 bg-error/5 p-6', className)} role="alert">
       <div className="flex items-start gap-3">
         <Icon name="error" size={22} className="mt-0.5 text-error" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-heading text-title-md text-on-surface">{title}</h3>
+          <h3 className="font-heading text-title-md text-on-surface">{title ?? t('errors.somethingWentWrong')}</h3>
           {message && <p className="mt-1 font-body-sm text-on-surface-variant">{message}</p>}
           {onRetry && (
             <Button variant="secondary" size="sm" className="mt-4" onClick={onRetry} icon="refresh">
-              Try again
+              {t('common.retry')}
             </Button>
           )}
         </div>
@@ -427,8 +431,10 @@ export function Tabs({ tabs, value, onChange, className = '', size = 'md' }) {
 export function Dialog({ open, onClose, title, description, children, footer, size = 'md' }) {
   const panelRef = useRef(null);
   const titleId = useId();
+  const t = useT();
   useModalFocus(open, panelRef, onClose);
 
+  // Hooks first: the early return below must not sit above one.
   if (!open) return null;
 
   const widths = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
@@ -462,7 +468,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
               type="button"
               onClick={onClose}
               className="-mr-2 rounded p-2 text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface"
-              aria-label="Close dialog"
+              aria-label={t('common.closeDialog')}
             >
               <Icon name="close" size={20} />
             </button>
@@ -559,18 +565,20 @@ export function Stat({ label, value, icon, tone = 'default', hint }) {
 const MasteryContext = createContext(null);
 export const useMasteryTone = () => useContext(MasteryContext);
 
+/* Colours only — the wording lives in the dictionaries, keyed by the same token. */
 export const MASTERY_TONE = {
-  notStarted: { label: 'Not Started', className: 'text-on-surface-variant', bar: 'bg-surface-container-highest' },
-  learning: { label: 'Learning', className: 'text-info', bar: 'bg-info' },
-  practicing: { label: 'Practicing', className: 'text-warning', bar: 'bg-warning' },
-  mastered: { label: 'Mastered', className: 'text-success', bar: 'bg-success' },
+  notStarted: { className: 'text-on-surface-variant', bar: 'bg-surface-container-highest' },
+  learning: { className: 'text-info', bar: 'bg-info' },
+  practicing: { className: 'text-warning', bar: 'bg-warning' },
+  mastered: { className: 'text-success', bar: 'bg-success' },
 };
 
 export function MasteryBadge({ level, ...rest }) {
+  const t = useT();
   const tone = { notStarted: 'neutral', learning: 'info', practicing: 'warning', mastered: 'success' }[level];
   return (
     <Badge tone={tone} {...rest}>
-      {MASTERY_TONE[level]?.label ?? level}
+      {MASTERY_KEY[level] ? t(MASTERY_KEY[level]) : level}
     </Badge>
   );
 }

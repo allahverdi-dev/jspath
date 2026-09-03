@@ -7,13 +7,27 @@ import { isPersistent, usageBytes } from '../services/storage.js';
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { GUMROAD_MANAGE_URL } from '../features/billing/plans.js';
+import { useI18n } from '../i18n/index.jsx';
+
+/* Stable subscription tokens mapped to their wording. The tokens themselves are
+   what entitlement compares, and are never translated. */
+const STATUS_KEY = {
+  active: 'billing.statusActive',
+  canceling: 'billing.statusCanceling',
+  canceled: 'billing.statusCanceled',
+  expired: 'billing.statusExpired',
+  refunded: 'billing.statusRefunded',
+  revoked: 'billing.statusRevoked',
+  past_due: 'billing.statusPastDue',
+};
 
 export default function Settings() {
   const { state, actions } = useUserState();
   const { preference, setTheme } = useTheme();
   const toast = useToast();
   const { isAuthenticated, isConfigured } = useAuth();
-  const { plan, isPro, subscription, billingConfigured } = useEntitlements();
+  const { isPro, subscription, billingConfigured } = useEntitlements();
+  const { t, locale, setLocale, locales, localeNames, formatDate } = useI18n();
   const [confirmReset, setConfirmReset] = useState(false);
 
   const s = state.settings;
@@ -27,7 +41,7 @@ export default function Settings() {
     a.download = `jspath-progress-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.show({ tone: 'success', title: 'Progress exported' });
+    toast.show({ tone: 'success', titleKey: 'settings.exported' });
   };
 
   const importProgress = (event) => {
@@ -37,9 +51,9 @@ export default function Settings() {
     reader.onload = () => {
       try {
         actions.importState(JSON.parse(String(reader.result)));
-        toast.show({ tone: 'success', title: 'Progress imported' });
+        toast.show({ tone: 'success', titleKey: 'settings.imported' });
       } catch {
-        toast.show({ tone: 'error', title: 'Could not import', message: 'That file is not valid JSPath progress data.' });
+        toast.show({ tone: 'error', titleKey: 'settings.importFailed', messageKey: 'settings.importFailedBody' });
       }
     };
     reader.readAsText(file);
@@ -48,66 +62,83 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-2xl animate-fade-in">
-      <h1 className="font-display text-display-lg text-on-surface">Settings</h1>
-      <p className="mt-2 font-body-lg text-on-surface-variant">Every control here does something.</p>
+      <h1 className="font-display text-display-lg text-on-surface">{t('settings.title')}</h1>
+      <p className="mt-2 font-body-lg text-on-surface-variant">{t('settings.subtitle')}</p>
 
       <div className="mt-8 space-y-5">
         <Card className="p-5">
-          <SectionLabel className="mb-4">Appearance</SectionLabel>
+          <SectionLabel className="mb-4">{t('settings.appearance')}</SectionLabel>
           <div className="grid gap-2 sm:grid-cols-3">
-            {THEMES.map((t) => (
+            {THEMES.map((mode) => (
               <button
-                key={t}
+                key={mode}
                 type="button"
-                onClick={() => setTheme(t)}
+                onClick={() => setTheme(mode)}
                 className={cx(
                   'flex items-center justify-center gap-2 rounded border px-3 py-2.5 font-body-sm capitalize transition-colors',
-                  preference === t ? 'border-primary bg-primary/10 text-primary-ink' : 'border-outline-variant text-on-surface-variant hover:bg-surface-container',
+                  preference === mode ? 'border-primary bg-primary/10 text-primary-ink' : 'border-outline-variant text-on-surface-variant hover:bg-surface-container',
                 )}
-                aria-pressed={preference === t}
+                aria-pressed={preference === mode}
               >
-                <Icon name={t === 'dark' ? 'dark_mode' : t === 'light' ? 'light_mode' : 'contrast'} size={17} />
-                {t}
+                <Icon name={mode === 'dark' ? 'dark_mode' : mode === 'light' ? 'light_mode' : 'contrast'} size={17} />
+                {t(`settings.${mode}`)}
               </button>
             ))}
           </div>
 
           <div className="mt-4 divide-y divide-[rgb(var(--c-outline-variant))]">
             <Toggle
-              label="Reduce motion"
-              description="Removes animations and transitions across the app."
+              label={t('settings.reduceMotion')}
+              description={t('settings.reduceMotionHint')}
               checked={Boolean(s.reduceMotion)}
               onChange={(v) => set({ reduceMotion: v })}
             />
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Select label="Text size" value={s.fontScale} onChange={(e) => set({ fontScale: Number(e.target.value) })}>
-              <option value={0.9}>Small</option>
-              <option value={1}>Default</option>
-              <option value={1.1}>Large</option>
-              <option value={1.25}>Extra large</option>
+          {/* Language sits with the other display preferences: it changes how the
+              product reads, not what the learner is entitled to. */}
+          <div className="mt-4">
+            <Select
+              label={t('settings.languageLabel')}
+              hint={t('settings.languageHint')}
+              value={locale}
+              onChange={(e) => setLocale(e.target.value)}
+            >
+              {locales.map((code) => (
+                <option key={code} value={code}>{localeNames[code]}</option>
+              ))}
             </Select>
-            <Select label="Editor font size" value={s.editorFontSize} onChange={(e) => set({ editorFontSize: Number(e.target.value) })}>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Select label={t('settings.textSize')} value={s.fontScale} onChange={(e) => set({ fontScale: Number(e.target.value) })}>
+              <option value={0.9}>{t('settings.sizeSmall')}</option>
+              <option value={1}>{t('settings.sizeDefault')}</option>
+              <option value={1.1}>{t('settings.sizeLarge')}</option>
+              <option value={1.25}>{t('settings.sizeExtraLarge')}</option>
+            </Select>
+            <Select label={t('settings.editorFontSize')} value={s.editorFontSize} onChange={(e) => set({ editorFontSize: Number(e.target.value) })}>
               {[12, 13, 14, 15, 16, 18].map((n) => <option key={n} value={n}>{n}px</option>)}
             </Select>
           </div>
         </Card>
 
         <Card className="p-5">
-          <SectionLabel className="mb-4">Learning</SectionLabel>
+          <SectionLabel className="mb-4">{t('settings.learning')}</SectionLabel>
           <Select
-            label="Daily goal"
-            hint="Used to size your daily practice sessions."
+            label={t('settings.dailyGoal')}
+            hint={t('settings.dailyGoalHint')}
             value={s.dailyGoalMinutes}
             onChange={(e) => set({ dailyGoalMinutes: Number(e.target.value) })}
           >
-            {[10, 20, 30, 45, 60].map((n) => <option key={n} value={n}>{n} minutes a day</option>)}
+            {[10, 20, 30, 45, 60].map((n) => (
+              <option key={n} value={n}>{t('settings.minutesADay', { count: n })}</option>
+            ))}
           </Select>
           <div className="mt-2 divide-y divide-[rgb(var(--c-outline-variant))]">
             <Toggle
-              label="Run examples automatically"
-              description="Execute runnable lesson examples as soon as they appear."
+              label={t('settings.autoRun')}
+              description={t('settings.autoRunHint')}
               checked={Boolean(s.autoRunExamples)}
               onChange={(v) => set({ autoRunExamples: v })}
             />
@@ -115,55 +146,62 @@ export default function Settings() {
         </Card>
 
         <Card className="p-5">
-          <SectionLabel className="mb-3">Plan & billing</SectionLabel>
+          <SectionLabel className="mb-3">{t('billing.planAndBilling')}</SectionLabel>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="font-heading text-title-md capitalize text-on-surface">{plan} plan</p>
+              <p className="font-heading text-title-md text-on-surface">
+                {t('billing.planName', { plan: isPro ? t('common.pro') : t('common.free') })}
+              </p>
               <p className="mt-1 font-body-sm text-on-surface-variant">
                 {!isAuthenticated
-                  ? 'Sign in before purchasing Pro so Gumroad can be linked securely to your account.'
+                  ? t('billing.signInBeforePurchase')
                   : subscription
-                    ? `${subscription.status.replace('_', ' ')}${subscription.billing_interval ? ` · ${subscription.billing_interval}` : ''}`
+                    ? [
+                      t(STATUS_KEY[subscription.status] ?? 'billing.statusActive'),
+                      subscription.billing_interval
+                        ? t('billing.interval.' + subscription.billing_interval)
+                        : null,
+                    ].filter(Boolean).join(' · ')
                     : billingConfigured
-                      ? 'Your account currently has Free access.'
-                      : 'Billing is unavailable in this deployment; learning continues normally.'}
+                      ? t('billing.freeAccessNotice')
+                      : t('billing.billingUnavailable')}
               </p>
               {subscription?.current_period_end && (
                 <p className="mt-1 font-body-sm text-on-surface-variant">
-                  {subscription.status === 'canceling' ? 'Access until' : 'Renewal/access review'}:{' '}
-                  {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(subscription.current_period_end))}
+                  {subscription.status === 'canceling' ? t('billing.statusCanceling') : t('billing.statusActive')}:{' '}
+                  {formatDate(subscription.current_period_end, { dateStyle: 'medium' })}
                 </p>
               )}
             </div>
             {isPro ? (
-              <Button href={GUMROAD_MANAGE_URL} target="_blank" rel="noreferrer" variant="secondary" size="sm">Manage subscription</Button>
+              <Button href={GUMROAD_MANAGE_URL} target="_blank" rel="noreferrer" variant="secondary" size="sm">{t('billing.managePlan')}</Button>
             ) : (
-              <Button to="/pricing" size="sm" icon="upgrade">View Pro</Button>
+              <Button to="/pricing" size="sm" icon="upgrade">{t('billing.viewPro')}</Button>
             )}
           </div>
         </Card>
 
         <Card className="p-5">
-          <SectionLabel className="mb-3">Your data</SectionLabel>
+          <SectionLabel className="mb-3">{t('settings.data')}</SectionLabel>
           <p className="mb-4 font-body-sm text-on-surface-variant">
             {isPersistent()
-              ? `Progress is saved in this browser (about ${Math.round(usageBytes() / 1024)} KB).`
-              : 'Browser storage is unavailable, so progress is kept in memory only for this session.'}
+              ? t('settings.storageLocal', { kb: Math.round(usageBytes() / 1024) })
+              : t('settings.storageMemory')}{' '}
             {isAuthenticated
-              ? ' It also syncs to your account.'
+              ? t('settings.syncsToAccount')
               : isConfigured
-                ? ' Create an account to sync across devices.'
-                : ' Accounts are not configured for this deployment.'}
+                ? t('settings.createAccountToSync')
+                : t('auth.accountsUnavailable')}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm" onClick={exportProgress} icon="download">Export progress</Button>
+            <Button variant="secondary" size="sm" onClick={exportProgress} icon="download">{t('settings.exportProgress')}</Button>
             <label className="inline-flex">
               <span className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded border border-outline-variant px-3 font-body-sm text-on-surface transition hover:bg-surface-container-high">
-                <Icon name="upload" size={17} /> Import progress
+                <Icon name="upload" size={17} /> {t('settings.importProgress')}
                 <input type="file" accept="application/json" onChange={importProgress} className="sr-only" />
               </span>
             </label>
-            <Button variant="danger" size="sm" onClick={() => setConfirmReset(true)} icon="delete_forever">Reset everything</Button>
+            <Button variant="danger" size="sm" onClick={() => setConfirmReset(true)} icon="delete_forever">{t('settings.resetEverything')}</Button>
           </div>
         </Card>
       </div>
@@ -171,27 +209,26 @@ export default function Settings() {
       <Dialog
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
-        title="Reset all progress?"
-        description="This permanently deletes every lesson, exercise, quiz, challenge and project record stored in this browser."
+        title={t('settings.resetTitle')}
+        description={t('settings.resetWarning')}
         footer={
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" onClick={() => setConfirmReset(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setConfirmReset(false)}>{t('common.cancel')}</Button>
             <Button
               variant="danger"
               onClick={() => {
                 actions.resetProgress();
                 setConfirmReset(false);
-                toast.show({ tone: 'info', title: 'Progress reset' });
+                toast.show({ tone: 'info', titleKey: 'settings.progressReset' });
               }}
             >
-              Yes, delete everything
+              {t('settings.resetConfirm')}
             </Button>
           </div>
         }
       >
         <p className="font-body-md text-on-surface-variant">
-          This cannot be undone. If you might want it back, export your progress first and close this
-          dialog.
+          {t('settings.resetBody')}
         </p>
       </Dialog>
     </div>

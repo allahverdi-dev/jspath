@@ -2,10 +2,11 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AppRouter } from './router.jsx';
 import { ThemeProvider } from '../state/ThemeProvider.jsx';
-import { ToastProvider } from '../state/ToastProvider.jsx';
+import { ToastProvider, ToastViewport } from '../state/ToastProvider.jsx';
 import { AuthProvider } from '../state/AuthProvider.jsx';
 import { EntitlementProvider } from '../state/EntitlementProvider.jsx';
 import { UserStateProvider, useUserState } from '../state/UserStateProvider.jsx';
+import { I18nProvider } from '../i18n/index.jsx';
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary.jsx';
 import { RouteError } from '../components/feedback/RouteError.jsx';
 
@@ -42,9 +43,15 @@ export function App() {
           <AuthProvider>
             <EntitlementProvider>
               <UserStateProvider>
-                <PreferencesEffect />
-                <ScrollToTop />
-                <AppRouter />
+                {/* Inside UserStateProvider: the locale preference lives in the
+                    settings slice, so it persists and syncs like the theme. */}
+                <I18nProvider>
+                  <PreferencesEffect />
+                  <ScrollToTop />
+                  <AppRouter />
+                  {/* Inside I18nProvider so toast copy is translated. */}
+                  <ToastViewport />
+                </I18nProvider>
               </UserStateProvider>
             </EntitlementProvider>
           </AuthProvider>

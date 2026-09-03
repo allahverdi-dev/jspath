@@ -2,6 +2,7 @@ import { Component, Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { cx, Spinner } from '../ui/index.jsx';
 import { useUserState } from '../../state/UserStateProvider.jsx';
 import { useTheme } from '../../state/ThemeProvider.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 const MonacoEditor = lazy(() =>
   import('@monaco-editor/react').then((m) => ({ default: m.default })),
@@ -25,10 +26,12 @@ export function CodeEditor({
   readOnly = false,
   onRun,
   className = '',
-  ariaLabel = 'Code editor',
+  ariaLabel,
 }) {
   const { state } = useUserState();
   const { isDark } = useTheme();
+  const t = useT();
+  const label = ariaLabel ?? t('learning.codeEditorName');
   const [monacoFailed, setMonacoFailed] = useState(false);
   // Native text editing supports phone keyboards, selection and touch scrolling.
   const [mobile, setMobile] = useState(() => window.matchMedia?.(NATIVE_EDITOR_QUERY).matches ?? false);
@@ -61,7 +64,7 @@ export function CodeEditor({
         onRun={onRun}
         fontSize={mobile ? Math.max(16, fontSize) : fontSize}
         className={className}
-        ariaLabel={ariaLabel}
+        ariaLabel={label}
       />
     );
   }
@@ -88,7 +91,7 @@ export function CodeEditor({
               </div>
             }
             onMount={(editor, monaco) => {
-              editor.updateOptions({ ariaLabel });
+              editor.updateOptions({ ariaLabel: label });
               if (onRun) {
                 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => onRun());
               }
@@ -120,6 +123,7 @@ export function CodeEditor({
 
 /** Textarea fallback with the editing affordances people actually miss. */
 function PlainEditor({ value, onChange, height, readOnly, onRun, fontSize, className, ariaLabel }) {
+  const t = useT();
   const ref = useRef(null);
 
   const indent = () => {
@@ -147,8 +151,8 @@ function PlainEditor({ value, onChange, height, readOnly, onRun, fontSize, class
   return (
     <div className={cx('min-w-0 max-w-full overflow-hidden rounded border border-outline-variant', className)}>
       {!readOnly && <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant bg-surface-container-low px-2 py-1">
-        <button type="button" onClick={indent} className="rounded px-3 py-1 font-mono text-code-sm hover:bg-surface-container-high" aria-label="Insert two spaces">Indent</button>
-        <span className="font-mono text-code-sm text-on-surface-variant">JavaScript editor</span>
+        <button type="button" onClick={indent} className="rounded px-3 py-1 font-mono text-code-sm hover:bg-surface-container-high" aria-label={t('learning.insertTwoSpaces')}>{t('learning.indent')}</button>
+        <span className="font-mono text-code-sm text-on-surface-variant">{t('learning.codeEditor')}</span>
       </div>}
       <textarea
         ref={ref}

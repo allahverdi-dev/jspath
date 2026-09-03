@@ -211,13 +211,14 @@ export function groupResults(results) {
   return order.filter((k) => groups.has(k)).map((kind) => ({ kind, items: groups.get(kind) }));
 }
 
-export const KIND_LABEL = {
-  [CONTENT_KIND.MODULE]: 'Modules',
-  [CONTENT_KIND.LESSON]: 'Lessons',
-  [CONTENT_KIND.EXERCISE]: 'Exercises',
-  [CONTENT_KIND.CHALLENGE]: 'Challenges',
-  [CONTENT_KIND.PROJECT]: 'Projects',
-  [CONTENT_KIND.INTERVIEW]: 'Interview questions',
-  [CONTENT_KIND.REFERENCE]: 'Reference',
-  [CONTENT_KIND.CHEATSHEET]: 'Cheat sheets',
+/** Section headings for grouped results, as dictionary keys. */
+export const KIND_KEY = {
+  [CONTENT_KIND.MODULE]: 'search.kindModule',
+  [CONTENT_KIND.LESSON]: 'search.kindLesson',
+  [CONTENT_KIND.EXERCISE]: 'search.kindExercise',
+  [CONTENT_KIND.CHALLENGE]: 'search.kindChallenge',
+  [CONTENT_KIND.PROJECT]: 'search.kindProject',
+  [CONTENT_KIND.INTERVIEW]: 'search.kindInterview',
+  [CONTENT_KIND.REFERENCE]: 'search.kindReference',
+  [CONTENT_KIND.CHEATSHEET]: 'search.kindCheatsheet',
 };

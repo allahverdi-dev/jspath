@@ -6,7 +6,8 @@ import Placement from './Placement.jsx';
 import QUESTIONS from '../content/placement/index.js';
 import { moduleById } from '../content/registry.js';
 import { createInitialState, completeLesson } from '../features/progress/progressEngine.js';
-import { PLACEMENT_DOMAIN_LABEL } from '../content/schema/types.js';
+import { PLACEMENT_DOMAIN_KEY } from '../content/schema/types.js';
+import en from '../i18n/locales/en.js';
 
 /**
  * Page-level coverage for the placement assessment.
@@ -214,7 +215,8 @@ describe('result', () => {
     await completeAssessment(user, { correct: true });
 
     const breakdown = screen.getByText(/how each area went/i).closest('div');
-    for (const label of Object.values(PLACEMENT_DOMAIN_LABEL)) {
+    for (const key of Object.values(PLACEMENT_DOMAIN_KEY)) {
+      const label = key.split('.').reduce((node, part) => node[part], en);
       expect(within(breakdown).getByText(label)).toBeInTheDocument();
     }
     expect(within(breakdown).getAllByText(/strong|mixed|focus area/i).length).toBeGreaterThan(0);

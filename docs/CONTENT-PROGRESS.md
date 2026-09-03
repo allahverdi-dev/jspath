@@ -15,6 +15,8 @@ Status of each content pillar. Counts come from
 | Cross-content validation | **COMPLETE** | 1856 relations verified |
 | Final frontend / product QA | **COMPLETE** | 35 routes, 12 flows, 4 defects fixed |
 | Product completion / production readiness | **COMPLETE** | premium payload protected, RLS captured, headers shipped |
+| Localization / i18n | **COMPLETE** | all product chrome in en / az / ru, 912 strings |
+| Content-language boundary | **COMPLETE** | authored English marked `lang="en"` inside a translated UI |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -474,6 +476,179 @@ Supabase redirect URLs and RLS state, Edge Function secrets, the deploy ordering
 between `content:premium` and `functions deploy`, the Google and GitHub callback
 URLs, and the Gumroad webhook and product allowlist.
 
+## Localization / i18n
+
+The **product interface** is available in English, Azerbaijani and Russian.
+**Authored learning content remains English** and is canonical — that split is
+deliberate, and the language selector says so rather than implying a translation
+that does not exist.
+
+### Architecture
+
+No i18n dependency was added. The app ships five production packages, and what a
+library would contribute is key lookup, interpolation and plural selection. The
+first two are a few lines; the third is the part worth getting right, and the
+platform already does it better than a hand-written rule table:
+`Intl.PluralRules` selects plural categories, `Intl.DateTimeFormat` formats dates,
+`Intl.NumberFormat` formats numbers.
+
+```
+src/i18n/core.js       lookup, interpolation, plurals, formatters
+src/i18n/index.jsx     I18nProvider, useI18n, useT
+src/i18n/locales/      en.js (canonical), az.js, ru.js
+```
+
+**912 strings across 31 namespaces**, grouped by product surface — the largest
+being learning (113), billing (80), achievements (63), dashboard (59),
+interview (57), placement (48) and common (47). Russian carries more entries
+(952) because its counted strings supply `few` and `many` forms.
+
+### Behaviour
+
+- **Default and fallback** — English. A missing, unrecognised or unsupported saved
+  locale resolves to English rather than half-translating the interface. A missing
+  key falls back to English; a key missing everywhere renders as readable sentence
+  case, never as `billing.pendingCancellation`.
+- **Detection** — explicit choice only. The browser locale is deliberately *not*
+  used to switch automatically: English is the declared default, and silently
+  flipping a returning learner because of an OS setting is worse than asking.
+- **Persistence** — `state.settings.locale`, the existing settings slice. Local
+  storage for guests, normal cloud sync when signed in. No new table, and nothing
+  in billing or subscription data.
+- **Switching** — immediate, no reload. `document.documentElement.lang` follows,
+  so assistive technology announces the right language.
+- **Routing** — unchanged. No locale prefixes, so bookmarks, deep links, OAuth
+  redirects and Gumroad return URLs are unaffected.
+
+### Translation approach
+
+Established developer terminology stays in English where that is what the
+audience actually reads: JavaScript, DOM, API, Promise, async/await, callback,
+closure, prototype, array, object, fetch, HTTP, JSON, Map, Set, RegExp, Big O,
+Google, GitHub, OAuth, Pro, Free, XP, Playground. "Замыкание" is correct Russian,
+but a Russian-speaking developer reads `closure`.
+
+Plurals follow each language rather than English assumptions: Russian supplies
+`one/few/many` (1 урок, 2 урока, 5 уроков, 21 урок); Azerbaijani keeps the noun
+singular after any numeral (1 dərs, 5 dərs).
+
+### Localized surfaces
+
+Navigation and app shell (sidebar, mobile tab bar, aria labels) · Settings,
+including the language selector · Placement, end to end · the Pro gate and every
+billing status · auth (both pages, via the shared OAuth buttons) · content
+load/error states · 404 · bookmarks · difficulty and track labels.
+
+The Pro wall now takes a stable `kind` token instead of a hardcoded English
+sentence, so the same gate reads correctly in every language while gating
+identically — verified in all three locales, with no solution leak.
+
+### Not translated, by design
+
+Code, identifiers, method names and property paths. Stable internal values:
+`difficulty: 'beginner'`, `status === 'canceling'`, `plan: 'pro'`, content ids,
+slugs, `topicIds`, track ids. Only their display labels change, so entitlement
+logic is locale-independent by construction.
+
+### Validation
+
+| Suite | What it proves |
+| --- | --- |
+| `src/i18n/i18n.test.js` (36) | the three dictionaries agree on keys, values and interpolation variables; Russian plural categories and the Azerbaijani singular rule; Azerbaijani date and number formatting; that stable tokens stay untranslated |
+| `src/tests/i18n-ui.test.jsx` (30) | the plumbing: default, fallback, persistence, `<html lang>`, immediate switching, and that changing language writes *only* the locale |
+| `src/tests/i18n-surfaces.test.jsx` (45) | every migrated screen rendered in az and ru: correct wording and no leaked key |
+
+A build-time check (`scratchpad/check.mjs` during the phase) scrapes every
+`t('…')` in the source, expands the derived families from the app's own enums,
+achievement ids and onboarding ids, and asserts all **871 required keys** resolve
+in all three locales. That is the guarantee that no screen can render a missing
+key.
+
+The raw-key assertion is deliberately precise: it flags dotted text only when it
+**resolves to a real dictionary entry**. A blunt scan produced only false
+positives, because a Reference entry legitimately says "returns undefined", a
+challenge prompt contains `${userInput}`, and one interview question is *about*
+`[object Object]`. Mutation-tested by reintroducing the Bookmarks bug: the guard
+fails, as it should.
+
+### Verification
+
+- **Full suite: 572 passed** (24 files), up from 524.
+- **3-locale smoke across 27 routes each** — every route in the brief, including
+  a Free challenge, a Pro-gated challenge, both session routes and a 404. Zero
+  leaked keys in en, az and ru. Chrome headings translated; authored titles
+  ("Taking from an Infinite Sequence", "Array()", "Counter App") correctly still
+  English.
+- **Responsive** at 320px, 375px, 768px and 1280px in Azerbaijani and Russian:
+  no horizontal overflow on any surface, no clipped navigation labels.
+- **Live switching** through the real Settings control, without reload:
+  `Tənzimləmələr` → `Настройки` → `Settings`, `<html lang>` following each time,
+  persisting to `settings.locale` and leaving theme, font scale and daily goal
+  untouched. Console clean.
+- **Pro gating identical in all three locales**, no solution leak, and locale is
+  never an input to `canAccessContent`.
+- **Pro gating and premium delivery** behave identically in all three locales;
+  locale is never sent to the premium-content endpoint and never influences
+  entitlement.
+
+### Migration completed
+
+Every product surface is migrated: Landing, Dashboard, Curriculum, Module and
+Lesson chrome, Practice Hub and sessions, Challenges, Projects, Interview Prep
+and sessions, Reference, Cheat Sheets, Playground, Search, Profile, Achievements,
+My Learning, Bookmarks, Settings, Pricing, onboarding, auth, the app shell,
+errors and the 404.
+
+Three sources of English were removed along the way that a page-by-page sweep
+would not have found:
+
+- **Logic modules that built sentences.** `recommendations.js` composed
+  "X is your weakest started topic (42%)"; `masteryEngine.rankFor()` returned
+  "Advanced Dev"; the achievements list held 25 titles and descriptions. These
+  have no locale, so they now emit keys and the component resolves them.
+- **Enum label maps.** `DIFFICULTY_LABEL`, `TRACK_LABEL`, `MASTERY_LABEL`,
+  `INTERVIEW_KIND_LABEL`, `PLACEMENT_DOMAIN_LABEL`, `PLACEMENT_LEVEL_LABEL` and
+  the search `KIND_LABEL` are now `*_KEY` maps pointing at the dictionary. Some
+  were rendering the raw token — `DifficultyBadge` printed `beginner`,
+  lower-case, in every language.
+- **English inside JSX expressions.** Ternaries and template literals the text
+  scan cannot see: the sidebar's `{isPro ? 'Pro · Manage plan' : 'Upgrade to Pro'}`,
+  the plan line, `{xp.toLocaleString()} XP`, and plural concatenations such as
+  `{streak} day{streak === 1 ? '' : 's'}`. No plural concatenation remains.
+
+### Defects found and fixed
+
+- **Bookmarks rendered a raw key.** `message="{t('bookmarks.emptyBody')}"` — the
+  braces were inside the quotes, so learners saw the source of the call. Shipped
+  by the previous pass; the regression test now reproduces it.
+- **Placement was not fully localized** despite being reported as done: the
+  result level and every domain label came from English constants, and the "why"
+  sentence was assembled from English clauses with a hand-rolled "a, b and c"
+  list. It is now one key per case with `Intl.ListFormat` joining.
+- **Azerbaijani dates and numbers were wrong on reduced-ICU runtimes** —
+  "2026 M03 14" instead of "14 mart 2026". See `docs/I18N.md` §6.
+- **Two links with the same accessible name.** Restructuring the guest notice on
+  /login left its inline link duplicating the guest button below it.
+- **Sentence fragments around links.** The unconfigured-accounts notices split a
+  sentence around a link, which forces English word order on every language.
+
+### Remaining English, by category
+
+The audit sweeps `src/pages`, `src/components`, `src/layouts`, `src/features`,
+`src/state` and `src/services` for both visible text and English inside JSX
+expressions. Everything left is classified:
+
+| Category | Count | Examples |
+| --- | --- | --- |
+| Authored learning content | 85 | `viz/Diagram.jsx` — the teaching diagrams: "Stack grows upward · last in, first out" |
+| Technical / code | ~20 | sandbox runtime messages beside real JS errors, `ENV_TONE` keys, the Playground starter snippet, `revenue.js` |
+| External product names | 3 | JSPath, Google, GitHub |
+| Developer-only, never rendered | ~12 | `PLAN_DEFINITIONS` descriptions, search index `subtitle`, Supabase/entitlement error strings no surface displays |
+| **Accidental untranslated UI** | **0** | — |
+
+`viz/Diagram.jsx` is renderable only from an authored lesson section, so its
+strings are lesson content and stay English with the rest of it.
+
 ## Verification
 
 All gates green as of the last run:
@@ -483,7 +658,7 @@ All gates green as of the last run:
 | `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 461 passed (21 files) |
+| `npm test` | 597 passed (26 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -524,7 +699,51 @@ closure (4), event (9), regex (14).
   by a hash of the question id (`src/content/placement/index.js`). The rotation is
   deterministic, not random, so the assessment presents identically every run.
 
+## Content-language boundary
+
+The interface is translated; the learning content is not, and `<html lang>`
+follows the interface. Every unmarked authored string therefore claimed to be
+Azerbaijani or Russian, with two visible consequences: screen readers announced
+English prose with the wrong phonetics, and `text-transform: uppercase` — which
+is language-sensitive — rendered the authored word "Orientation" as
+"ORİENTATİON" under `lang="az"`.
+
+Authored content now declares `lang="en"` where it is rendered. The marking is
+per string rather than per region, because `lang` is inherited and marking a
+panel would relabel the translated buttons inside it.
+
+Two shared boundaries carry it, so the call sites barely changed:
+
+- **`InlineMarkup`** — every authored prose string in the app already flows
+  through it (70 call sites). It now wraps its output in
+  `<span lang="en" style="display:contents">`: the language applies, no box is
+  generated, and layout is untouched. Verified: 0px overflow on lesson,
+  reference, cheat sheet and project pages, block code still block-level.
+- **`Authored`** — a new one-line component for plain authored strings: titles,
+  API names, categories, topic labels, milestone names, test names.
+
+`Diagram` marks its whole `<figure>` (educational content end to end, no chrome
+inside); `HighlightedCode` marks its `<pre>`.
+
+Where a chip mixes a translated label with an authored value, only the authored
+half is marked — `{t('learning.moduleNumber', { order })} · <Authored>{shortTitle}</Authored>`
+— which also retired the `learning.moduleBadge` key that had interpolated the two
+together.
+
+### Verified
+
+A/B in the browser under `lang="az"`, same font, same page: `lang="az"` renders
+**ORİENTATİON**, `lang="en"` renders **ORIENTATION**, and the live chip now reads
+"MODUL 00 · ORIENTATION". Smoke across a lesson, challenge, project, interview
+question, Reference entry and Cheat Sheet in both az and ru: every authored title
+resolves to `en`, every marked region is `en` (0 exceptions), and translated
+controls beside them still resolve to the UI locale. Console clean.
+
+`src/tests/content-language.test.jsx` (21) asserts both directions and that
+entitlement, ids, slugs and content are unchanged. Mutation-tested: removing
+`lang="en"` from `Authored` fails eight assertions.
+
 ## Next phase
 
-**Localization / i18n** — English default, then Azerbaijani and Russian. Not
-started; no files written for it yet.
+**Final release / production verification.** Not started; no files written for it
+yet.

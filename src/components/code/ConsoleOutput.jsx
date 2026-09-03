@@ -1,4 +1,5 @@
 import { Icon, cx } from '../ui/index.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 const LEVEL_STYLES = {
   log: 'text-on-surface',
@@ -19,7 +20,9 @@ const LEVEL_ICONS = {
  * error. Errors carry the line number the sandbox recovered from the stack, which
  * is mapped back to the learner's own line numbering.
  */
-export function ConsoleOutput({ result, emptyMessage = 'No output. Use console.log() to print a value.', className = '' }) {
+export function ConsoleOutput({ result, emptyMessage, className = '' }) {
+  const t = useT();
+  const empty = emptyMessage ?? t('learning.consoleEmpty');
   const logs = result?.logs ?? [];
   const error = result?.error;
 
@@ -27,15 +30,15 @@ export function ConsoleOutput({ result, emptyMessage = 'No output. Use console.l
     <div className={cx('bg-surface-container-lowest', className)}>
       <div className="flex items-center gap-2 border-b border-outline-variant px-4 py-1.5">
         <Icon name="terminal" size={13} className="text-on-surface-variant" />
-        <span className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">Console</span>
+        <span className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">{t('learning.console')}</span>
         {result?.timedOut && (
-          <span className="ml-auto font-mono text-code-sm text-warning">timed out</span>
+          <span className="ml-auto font-mono text-code-sm text-warning">{t('learning.timedOut')}</span>
         )}
       </div>
 
       <div className="thin-scrollbar max-h-72 overflow-y-auto px-4 py-2.5 font-mono text-code-md">
         {logs.length === 0 && !error && (
-          <p className="text-on-surface-variant/70">{emptyMessage}</p>
+          <p className="text-on-surface-variant/70">{empty}</p>
         )}
 
         {logs.map((line, i) => (

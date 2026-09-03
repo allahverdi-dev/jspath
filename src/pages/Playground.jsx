@@ -5,6 +5,7 @@ import { Button, Icon, Card, SectionLabel, Input } from '../components/ui/index.
 import { runCode } from '../services/sandbox/index.js';
 import { STORAGE_KEYS, readJson, writeJson } from '../services/storage.js';
 import { useToast } from '../state/ToastProvider.jsx';
+import { useT } from '../i18n/index.jsx';
 
 const STARTER = [
   '// Welcome to the JSPath playground.',
@@ -26,6 +27,7 @@ const STARTER = [
 
 export default function Playground() {
   const toast = useToast();
+  const t = useT();
   const [code, setCode] = useState(() => readJson(STORAGE_KEYS.playground, STARTER));
   const [result, setResult] = useState(null);
   const [running, setRunning] = useState(false);
@@ -46,12 +48,12 @@ export default function Playground() {
   }, [code]);
 
   const save = () => {
-    const label = name.trim() || `Snippet ${snippets.length + 1}`;
+    const label = name.trim() || t('playground.defaultSnippetName', { number: snippets.length + 1 });
     const next = [{ id: Date.now(), name: label, code, at: new Date().toISOString() }, ...snippets].slice(0, 50);
     setSnippets(next);
     writeJson(STORAGE_KEYS.snippets, next);
     setName('');
-    toast.show({ tone: 'success', title: 'Snippet saved', message: label });
+    toast.show({ tone: 'success', titleKey: 'playground.snippetSaved', message: label });
   };
 
   const remove = (id) => {
@@ -63,9 +65,9 @@ export default function Playground() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(code);
-      toast.show({ tone: 'success', title: 'Copied to clipboard' });
+      toast.show({ tone: 'success', titleKey: 'playground.copiedToClipboard' });
     } catch {
-      toast.show({ tone: 'error', title: 'Could not copy', message: 'Your browser blocked clipboard access.' });
+      toast.show({ tone: 'error', titleKey: 'playground.couldNotCopy', messageKey: 'playground.clipboardBlocked' });
     }
   };
 
@@ -73,38 +75,42 @@ export default function Playground() {
     <div className="animate-fade-in">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-display-lg text-on-surface">Playground</h1>
+          <h1 className="font-display text-display-lg text-on-surface">{t('playground.title')}</h1>
           <p className="mt-2 font-body-lg text-on-surface-variant">
-            A scratchpad for trying things out. Runs in an isolated worker — infinite loops are
-            interrupted rather than freezing the page.
+            {t('playground.subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" onClick={run} loading={running} icon="play_arrow">{running ? 'Running' : 'Run'}</Button>
-          <Button size="sm" variant="secondary" onClick={copy} icon="content_copy">Copy</Button>
-          <Button size="sm" variant="ghost" onClick={() => { setCode(STARTER); setResult(null); }} icon="restart_alt">Reset</Button>
+          <Button size="sm" onClick={run} loading={running} icon="play_arrow">{running ? t('learning.running') : t('common.run')}</Button>
+          <Button size="sm" variant="secondary" onClick={copy} icon="content_copy">{t('common.copy')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setCode(STARTER); setResult(null); }} icon="restart_alt">{t('common.reset')}</Button>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-4">
-          <CodeEditor value={code} onChange={setCode} onRun={run} height={440} ariaLabel="Playground code editor" />
+          <CodeEditor value={code} onChange={setCode} onRun={run} height={440} ariaLabel={t('playground.editorLabel')} />
           <div className="overflow-hidden rounded border border-outline-variant">
-            <ConsoleOutput result={result} emptyMessage="Press Run (or Ctrl/⌘ + Enter) to execute your code." />
+            <ConsoleOutput result={result} emptyMessage={t('playground.consoleEmpty')} />
           </div>
         </div>
 
         <div className="space-y-4">
           <Card className="p-4">
-            <SectionLabel className="mb-3">Save this snippet</SectionLabel>
-            <Input placeholder="Snippet name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Snippet name" />
-            <Button onClick={save} variant="secondary" size="sm" className="mt-3 w-full" icon="bookmark_add">Save</Button>
+            <SectionLabel className="mb-3">{t('playground.saveSnippet')}</SectionLabel>
+            <Input
+              placeholder={t('playground.snippetName')}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              aria-label={t('playground.snippetName')}
+            />
+            <Button onClick={save} variant="secondary" size="sm" className="mt-3 w-full" icon="bookmark_add">{t('common.save')}</Button>
           </Card>
 
           <Card className="p-4">
-            <SectionLabel className="mb-3">Saved snippets</SectionLabel>
+            <SectionLabel className="mb-3">{t('playground.savedSnippets')}</SectionLabel>
             {snippets.length === 0 ? (
-              <p className="font-body-sm text-on-surface-variant">Nothing saved yet. Snippets are stored in this browser.</p>
+              <p className="font-body-sm text-on-surface-variant">{t('playground.nothingSaved')}</p>
             ) : (
               <ul className="space-y-1">
                 {snippets.map((s) => (
@@ -120,7 +126,7 @@ export default function Playground() {
                       type="button"
                       onClick={() => remove(s.id)}
                       className="rounded p-1 text-on-surface-variant transition hover:text-error"
-                      aria-label={`Delete ${s.name}`}
+                      aria-label={t('playground.deleteSnippet', { name: s.name })}
                     >
                       <Icon name="delete" size={15} />
                     </button>
@@ -131,11 +137,11 @@ export default function Playground() {
           </Card>
 
           <Card className="p-4">
-            <SectionLabel className="mb-2">Notes</SectionLabel>
+            <SectionLabel className="mb-2">{t('playground.notes')}</SectionLabel>
             <ul className="space-y-1.5 font-body-sm text-on-surface-variant">
-              <li>• <code className="font-mono">console.log</code> output appears below the editor.</li>
-              <li>• There is no DOM here — the worker has no <code className="font-mono">document</code>.</li>
-              <li>• Execution stops after 6 seconds or ~5M loop iterations.</li>
+              <li>{t('playground.noteConsole')}</li>
+              <li>{t('playground.noteNoDom')}</li>
+              <li>{t('playground.noteTimeout')}</li>
             </ul>
           </Card>
         </div>

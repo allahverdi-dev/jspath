@@ -3,6 +3,7 @@ import { tokenize, TOKEN_CLASS } from './highlight.js';
 import { Icon, cx } from '../ui/index.jsx';
 import { ConsoleOutput } from './ConsoleOutput.jsx';
 import { runCode } from '../../services/sandbox/index.js';
+import { useT } from '../../i18n/index.jsx';
 
 /** Split highlighted tokens into per-line arrays so gutters stay aligned. */
 function useHighlightedLines(code, language) {
@@ -23,9 +24,10 @@ function useHighlightedLines(code, language) {
 export function HighlightedCode({ code, language = 'javascript', showLineNumbers = false, highlightLines = [], className = '' }) {
   const lines = useHighlightedLines(code, language);
   const gutterWidth = String(lines.length).length;
+  const t = useT();
 
   return (
-    <pre tabIndex={0} aria-label="Code sample" className={cx('thin-scrollbar min-w-0 max-w-full overflow-x-auto font-mono text-code-md leading-[1.6]', className)}>
+    <pre lang="en" tabIndex={0} aria-label={t('learning.codeSample')} className={cx('thin-scrollbar min-w-0 max-w-full overflow-x-auto font-mono text-code-md leading-[1.6]', className)}>
       <code className="block">
         {lines.map((tokens, i) => (
           <span
@@ -76,6 +78,7 @@ export function CodeBlock({
   highlightLines,
   className = '',
 }) {
+  const t = useT();
   const [source, setSource] = useState(code);
   const [editing, setEditing] = useState(false);
   const [result, setResult] = useState(null);
@@ -114,7 +117,7 @@ export function CodeBlock({
           {language === 'html' ? 'HTML' : language === 'text' ? 'OUTPUT' : 'JAVASCRIPT'}
         </span>
         {dirty && (
-          <span className="font-mono text-code-sm text-primary-ink">edited</span>
+          <span className="font-mono text-code-sm text-primary-ink">{t('learning.edited')}</span>
         )}
 
         <div className="ml-auto flex max-w-full flex-wrap items-center gap-1">
@@ -127,7 +130,7 @@ export function CodeBlock({
                 aria-pressed={editing}
               >
                 <Icon name={editing ? 'visibility' : 'edit'} size={14} />
-                {editing ? 'View' : 'Edit'}
+                {editing ? t('learning.view') : t('learning.edit')}
               </button>
               {(dirty || result) && (
                 <button
@@ -136,7 +139,7 @@ export function CodeBlock({
                   className="flex items-center gap-1 rounded px-2 py-1 font-mono text-code-sm text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
                 >
                   <Icon name="restart_alt" size={14} />
-                  Reset
+                  {t('common.reset')}
                 </button>
               )}
               <button
@@ -146,7 +149,7 @@ export function CodeBlock({
                 className="flex items-center gap-1 rounded bg-primary px-2.5 py-1 font-mono text-code-sm font-bold text-on-primary transition hover:bg-primary-fixed disabled:opacity-60"
               >
                 <Icon name="play_arrow" size={14} filled />
-                {running ? 'Running' : 'Run'}
+                {running ? t('learning.running') : t('common.run')}
               </button>
             </>
           )}
@@ -156,7 +159,7 @@ export function CodeBlock({
             className="flex items-center gap-1 rounded px-2 py-1 font-mono text-code-sm text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
           >
             <Icon name={copied ? 'check' : 'content_copy'} size={14} />
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? t('common.copied') : t('common.copy')}
           </button>
         </div>
       </div>
@@ -168,7 +171,7 @@ export function CodeBlock({
           spellCheck="false"
           autoCapitalize="off"
           autoCorrect="off"
-          aria-label="Editable code sample"
+          aria-label={t('learning.editableCodeSample')}
           className="thin-scrollbar block w-full resize-y bg-surface-container-lowest px-4 py-3 font-mono text-code-md leading-[1.6] text-on-surface outline-none"
           rows={Math.min(24, source.split('\n').length + 1)}
         />
@@ -187,7 +190,7 @@ export function CodeBlock({
       {output && !result && (
         <div className="border-t border-outline-variant bg-surface-container-low px-4 py-2.5">
           <p className="mb-1 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-            Expected output
+            {t('learning.expectedOutput')}
           </p>
           <pre className="thin-scrollbar overflow-x-auto font-mono text-code-md text-on-surface-variant">{output}</pre>
         </div>

@@ -12,7 +12,9 @@ describe('FeatureGate', () => {
   it('shows an upgrade state for locked content', () => {
     entitlement.allowed = false;
     render(<MemoryRouter><FeatureGate feature="projects"><p>Premium project</p></FeatureGate></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: /included with JSPath Pro/i })).toBeInTheDocument();
+    // The wall now names the content kind so the sentence can be translated;
+    // the substance asserted is unchanged — a locked heading and an upgrade path.
+    expect(screen.getByRole('heading', { name: /included with Pro/i })).toBeInTheDocument();
     expect(screen.queryByText('Premium project')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /View Pro options/i })).toHaveAttribute('href', '/pricing');
   });

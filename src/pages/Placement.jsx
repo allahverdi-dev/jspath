@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { modules, moduleById } from '../content/registry.js';
 import PLACEMENT_QUESTIONS from '../content/placement/index.js';
 import {
-  PLACEMENT_DOMAIN_LABEL,
-  PLACEMENT_LEVEL_LABEL,
+  PLACEMENT_DOMAIN_KEY,
+  PLACEMENT_LEVEL_KEY,
   QUIZ_KIND,
 } from '../content/schema/types.js';
 import {
@@ -17,6 +17,8 @@ import { Card, Button, Icon, ProgressBar, SectionLabel, cx } from '../components
 import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
 import { Logo } from '../layouts/AppShell.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
+import { useI18n } from '../i18n/index.jsx';
+import { INTL_LOCALES } from '../i18n/core.js';
 
 /**
  * The placement assessment.
@@ -34,16 +36,17 @@ import { useUserState } from '../state/UserStateProvider.jsx';
 const STAGE = { INTRO: 'intro', QUESTIONS: 'questions', RESULT: 'result' };
 
 function Shell({ children, progress, progressLabel }) {
+  const { t } = useI18n();
   return (
     <div className="safe-page safe-top safe-bottom min-h-screen bg-background">
-      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <a href="#main-content" className="skip-link">{t('nav.skipToContent')}</a>
       <header className="flex items-center px-4 py-6 lg:px-8">
         <Link to="/"><Logo /></Link>
         <Link
           to="/dashboard"
           className="ml-auto font-body-sm text-on-surface-variant transition hover:text-on-surface"
         >
-          Skip
+          {t('common.skip')}
         </Link>
       </header>
       {progress !== undefined && (
@@ -61,25 +64,25 @@ function Shell({ children, progress, progressLabel }) {
  * ------------------------------------------------------------------ */
 
 function Intro({ total, onStart, previous }) {
+  const { t } = useI18n();
   return (
     <>
       <p className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-        Placement assessment
+        {t('placement.label')}
       </p>
       <h1 className="mt-2 font-display text-headline-md text-on-surface">
-        Find out where to start
+        {t('placement.title')}
       </h1>
       <p className="mt-3 font-body-md leading-7 text-on-surface-variant">
-        Answer {total} JavaScript questions so JSPath can recommend where to begin. This does not
-        lock or skip any curriculum — every module stays open to you either way.
+        {t('placement.intro', { count: total })}
       </p>
 
       <ul className="mt-6 space-y-3">
         {[
-          ['schedule', `${total} multiple-choice questions, roughly 15 minutes.`],
-          ['visibility_off', 'Answers are not revealed as you go, so the result means something.'],
-          ['edit', 'You can go back and change any answer before you submit.'],
-          ['lock_open', 'Free for everyone. Nothing here requires an account or a subscription.'],
+          ['schedule', t('placement.pointDuration', { count: total })],
+          ['visibility_off', t('placement.pointHidden')],
+          ['edit', t('placement.pointEditable')],
+          ['lock_open', t('placement.pointFree')],
         ].map(([icon, text]) => (
           <li key={icon} className="flex items-start gap-3">
             <Icon name={icon} size={18} className="mt-0.5 shrink-0 text-on-surface-variant" />
@@ -90,21 +93,23 @@ function Intro({ total, onStart, previous }) {
 
       {previous && (
         <Card className="mt-6 p-4">
-          <SectionLabel className="mb-1">Your last result</SectionLabel>
+          <SectionLabel className="mb-1">{t('placement.lastResult')}</SectionLabel>
           <p className="font-body-sm text-on-surface-variant">
-            {PLACEMENT_LEVEL_LABEL[previous.level]} — {previous.correctCount} of{' '}
-            {previous.totalCount} correct. Retaking replaces it; your curriculum progress is
-            untouched.
+            {t('placement.lastResultBody', {
+              level: t(`placement.level${previous.level[0].toUpperCase()}${previous.level.slice(1)}`),
+              correct: previous.correctCount,
+              total: previous.totalCount,
+            })}
           </p>
         </Card>
       )}
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Button onClick={onStart} size="lg" iconRight="arrow_forward">
-          {previous ? 'Retake the assessment' : 'Start the assessment'}
+          {previous ? t('placement.retake') : t('placement.start')}
         </Button>
         <Button to="/curriculum" variant="secondary" size="lg" icon="school">
-          Browse the curriculum
+          {t('placement.browseCurriculum')}
         </Button>
       </div>
     </>
@@ -116,6 +121,7 @@ function Intro({ total, onStart, previous }) {
  * ------------------------------------------------------------------ */
 
 function QuestionStage({ questions, answers, index, onAnswer, onMove, onSubmit }) {
+  const { t } = useI18n();
   const question = questions[index];
   const isLast = index === questions.length - 1;
   const selected = answers[question.id];
@@ -132,9 +138,9 @@ function QuestionStage({ questions, answers, index, onAnswer, onMove, onSubmit }
     <>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-          Question {index + 1} of {questions.length}
+          {t('placement.questionPosition', { current: index + 1, total: questions.length })}
         </p>
-        <p className="font-body-sm text-on-surface-variant">{answeredCount} answered</p>
+        <p className="font-body-sm text-on-surface-variant">{t('placement.answeredCount', { count: answeredCount })}</p>
       </div>
 
       <h1 className="mt-3 font-heading text-title-md leading-8 text-on-surface">
@@ -148,10 +154,10 @@ function QuestionStage({ questions, answers, index, onAnswer, onMove, onSubmit }
       )}
 
       {isMulti && (
-        <p className="mt-3 font-body-sm text-on-surface-variant">Select every option that applies.</p>
+        <p className="mt-3 font-body-sm text-on-surface-variant">{t('placement.selectAll')}</p>
       )}
 
-      <div className="mt-6 space-y-2" role={isMulti ? 'group' : 'radiogroup'} aria-label="Answer options">
+      <div className="mt-6 space-y-2" role={isMulti ? 'group' : 'radiogroup'} aria-label={t('placement.answerOptions')}>
         {question.options.map((option, i) => {
           const active = isMulti ? Array.isArray(selected) && selected.includes(i) : selected === i;
           return (
@@ -192,27 +198,27 @@ function QuestionStage({ questions, answers, index, onAnswer, onMove, onSubmit }
           disabled={index === 0}
           icon="arrow_back"
         >
-          Previous
+          {t('common.previous')}
         </Button>
         {isLast ? (
           <Button onClick={onSubmit} iconRight="check">
-            Submit and see my result
+            {t('placement.submit')}
           </Button>
         ) : (
           <Button onClick={() => onMove(index + 1)} iconRight="arrow_forward">
-            Next
+            {t('common.next')}
           </Button>
         )}
         {selected === undefined && (
           <span className="font-body-sm text-on-surface-variant">
-            You can skip this and come back to it.
+            {t('placement.skipHint')}
           </span>
         )}
       </div>
 
       <p className="mt-6 font-body-sm text-on-surface-variant">
         <Icon name="info" size={14} className="mr-1.5 inline" />
-        Answers are not revealed during the assessment — that is what keeps the result honest.
+        {t('placement.notRevealed')}
       </p>
     </>
   );
@@ -225,10 +231,11 @@ function QuestionStage({ questions, answers, index, onAnswer, onMove, onSubmit }
 const pct = (n) => Math.round(n * 100);
 
 function DomainBar({ entry }) {
-  const label = PLACEMENT_DOMAIN_LABEL[entry.domain] ?? entry.domain;
+  const { t } = useI18n();
+  const label = PLACEMENT_DOMAIN_KEY[entry.domain] ? t(PLACEMENT_DOMAIN_KEY[entry.domain]) : entry.domain;
   const tone =
     entry.score >= MASTERY_THRESHOLD ? 'strong' : entry.score >= WEAK_THRESHOLD ? 'mixed' : 'gap';
-  const toneLabel = { strong: 'Strong', mixed: 'Mixed', gap: 'Focus area' }[tone];
+  const toneLabel = { strong: t('placement.strong'), mixed: t('placement.mixed'), gap: t('placement.focusArea') }[tone];
   const toneClass = {
     strong: 'bg-success text-on-success',
     mixed: 'bg-surface-container-high text-on-surface',
@@ -260,51 +267,54 @@ function DomainBar({ entry }) {
 }
 
 function Result({ result, onRetake }) {
+  const { t, locale } = useI18n();
+  const intlLocale = INTL_LOCALES[locale] ?? locale;
   const navigate = useNavigate();
   const { actions } = useUserState();
   const recommended = moduleById[result.recommendedModuleId];
 
   // Every sentence below is derived from the learner's own answers. There is no
   // "readiness" figure and no analysis that the assessment did not actually do.
-  const label = (d) => PLACEMENT_DOMAIN_LABEL[d] ?? d;
-  const list = (items) =>
-    items.length <= 1
-      ? items.map(label).join('')
-      : `${items.slice(0, -1).map(label).join(', ')} and ${label(items[items.length - 1])}`;
+  const label = (d) => (PLACEMENT_DOMAIN_KEY[d] ? t(PLACEMENT_DOMAIN_KEY[d]) : d);
+  const list = (items) => new Intl.ListFormat(intlLocale, { style: 'long', type: 'conjunction' })
+    .format(items.map(label));
 
   // Only the domain the recommendation actually turns on is named as the gap.
   // Listing every weak area here would imply the earliest one was all of them.
   const target = result.recommendedDomain;
   const targetIsGap = result.gaps.includes(target);
 
+  const finding = targetIsGap ? t('placement.whyGaps') : t('placement.whyInconsistent');
   const why = result.recommendationReason
-    ? `You scored ${pct(result.score)}% overall and ${result.recommendationReason}.`
+    ? t('placement.whyScored', { percent: pct(result.score), reason: result.recommendationReason })
     : result.strengths.length
-      ? `${list(result.strengths)} ${result.strengths.length === 1 ? 'came' : 'came'} out strong, but ${label(target)} is the earliest area where the answers ${targetIsGap ? 'showed real gaps' : 'were inconsistent'}.`
-      : `${label(target)} is the earliest area where the answers ${targetIsGap ? 'showed real gaps' : 'were inconsistent'}, so it is the natural place to begin.`;
+      ? t('placement.whyStrengthsBut', {
+        strengths: list(result.strengths),
+        domain: label(target),
+        finding,
+      })
+      : t('placement.whyEarliest', { domain: label(target), finding });
 
   return (
     <>
       <p className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-        Your result
+        {t('placement.yourResult')}
       </p>
       <h1 className="mt-2 font-display text-headline-md text-on-surface">
-        {PLACEMENT_LEVEL_LABEL[result.level]}
+        {PLACEMENT_LEVEL_KEY[result.level] ? t(PLACEMENT_LEVEL_KEY[result.level]) : result.level}
       </h1>
       <p className="mt-3 font-body-md leading-7 text-on-surface-variant">
-        You answered {result.correctCount} of {result.totalCount} questions correctly
-        ({pct(result.score)}% weighted by difficulty). This is a starting point, not a verdict —
-        nothing is locked and you can begin anywhere you like.
+        {t('placement.resultSummary', { correct: result.correctCount, total: result.totalCount, percent: pct(result.score) })}
       </p>
 
       {recommended && (
         <div className="mt-6 rounded border border-primary/30 bg-primary/5 p-5">
-          <SectionLabel className="mb-1">Recommended start</SectionLabel>
+          <SectionLabel className="mb-1">{t('placement.recommendedStart')}</SectionLabel>
           <p className="font-heading text-title-md text-on-surface">
-            Module {String(recommended.order).padStart(2, '0')} — {recommended.title}
+            {t('placement.recommendedModule', { order: String(recommended.order).padStart(2, '0'), title: recommended.title })}
           </p>
           <p className="mt-2 font-body-sm leading-6 text-on-surface-variant">
-            <span className="font-semibold text-on-surface">Why: </span>
+            <span className="font-semibold text-on-surface">{t('placement.why')}</span>
             {why}
           </p>
           <Button
@@ -313,13 +323,13 @@ function Result({ result, onRetake }) {
             iconRight="arrow_forward"
             onClick={() => actions.updateProfile({ onboarded: true })}
           >
-            Start here
+            {t('placement.startHere')}
           </Button>
         </div>
       )}
 
       <Card className="mt-6 p-5">
-        <SectionLabel className="mb-4">How each area went</SectionLabel>
+        <SectionLabel className="mb-4">{t('placement.howEachArea')}</SectionLabel>
         <ul className="space-y-4">
           {result.breakdown.map((entry) => (
             <DomainBar key={entry.domain} entry={entry} />
@@ -329,10 +339,10 @@ function Result({ result, onRetake }) {
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Button to="/curriculum" variant="secondary" icon="school">
-          Browse the whole curriculum
+          {t('placement.browseWholeCurriculum')}
         </Button>
         <Button variant="secondary" onClick={onRetake} icon="refresh">
-          Retake assessment
+          {t('placement.retakeShort')}
         </Button>
         <Button
           variant="ghost"
@@ -341,7 +351,7 @@ function Result({ result, onRetake }) {
             navigate('/dashboard');
           }}
         >
-          Go to dashboard
+          {t('placement.goToDashboard')}
         </Button>
       </div>
     </>
@@ -353,6 +363,7 @@ function Result({ result, onRetake }) {
  * ------------------------------------------------------------------ */
 
 export default function Placement() {
+  const { t } = useI18n();
   const { state, actions } = useUserState();
   const questions = PLACEMENT_QUESTIONS;
 
@@ -394,7 +405,7 @@ export default function Placement() {
   }, [stage, index, questions.length]);
 
   return (
-    <Shell progress={progress} progressLabel="Placement progress">
+    <Shell progress={progress} progressLabel={t('placement.progress')}>
       {stage === STAGE.INTRO && (
         <Intro
           total={questions.length}

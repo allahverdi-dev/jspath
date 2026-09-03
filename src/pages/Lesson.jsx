@@ -11,9 +11,11 @@ import {
 } from '../components/ui/index.jsx';
 import { ContentSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
+import { useT } from '../i18n/index.jsx';
 import { SECTION } from '../content/schema/types.js';
 import { Logo } from '../layouts/AppShell.jsx';
 import { InlineMarkup } from '../components/learning/InlineMarkup.jsx';
+import { Authored } from '../components/learning/Authored.jsx';
 
 /**
  * The lesson reader — the screen learners spend most of their time in.
@@ -26,6 +28,7 @@ export default function Lesson() {
   const { moduleSlug, lessonSlug } = useParams();
   const navigate = useNavigate();
   const { state, actions } = useUserState();
+  const t = useT();
 
   const [lesson, setLesson] = useState(null);
   const [error, setError] = useState(null);
@@ -41,7 +44,7 @@ export default function Lesson() {
     setError(null);
 
     if (!meta) {
-      setError(new Error('That lesson does not exist.'));
+      setError({ messageKey: 'learning.lessonDoesNotExist' });
       return undefined;
     }
 
@@ -50,7 +53,7 @@ export default function Lesson() {
         if (!cancelled) setLesson(full);
       })
       .catch((e) => {
-        if (!cancelled) setError(e);
+        if (!cancelled) setError({ message: e.message });
       });
 
     return () => { cancelled = true; };
@@ -94,9 +97,9 @@ export default function Lesson() {
       <div className="mx-auto max-w-2xl px-4 py-20">
         <EmptyState
           icon="search_off"
-          title="Lesson not found"
-          message={error.message}
-          action={<Button to="/curriculum" icon="school">Browse the curriculum</Button>}
+          title={t('learning.lessonNotFound')}
+          message={error.messageKey ? t(error.messageKey) : error.message}
+          action={<Button to="/curriculum" icon="school">{t('learning.browseCurriculum')}</Button>}
         />
       </div>
     );
@@ -134,9 +137,9 @@ export default function Lesson() {
       {/* Lesson header bar — replaces the app shell for focused reading */}
       <header className="safe-top sticky top-0 z-30 border-b border-outline-variant bg-surface/90 backdrop-blur-xl">
         <div className="mx-auto flex min-h-14 w-full max-w-container-max flex-wrap items-center gap-2 px-4 py-1 lg:px-8">
-          <Link to="/curriculum" aria-label="Back to curriculum" className="touch-target flex items-center gap-2 text-on-surface-variant transition hover:text-on-surface">
+          <Link to="/curriculum" aria-label={t('nav.backToCurriculum')} className="touch-target flex items-center gap-2 text-on-surface-variant transition hover:text-on-surface">
             <Icon name="arrow_back" size={18} />
-            <span className="hidden font-body-sm sm:inline">Curriculum</span>
+            <span className="hidden font-body-sm sm:inline">{t('learning.curriculum')}</span>
           </Link>
 
           <div className="mx-2 hidden h-5 w-px bg-outline-variant sm:block" aria-hidden="true" />
@@ -152,21 +155,21 @@ export default function Lesson() {
                 isBookmarked ? 'text-primary-ink' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface',
               )}
               aria-pressed={isBookmarked}
-              aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this lesson'}
+              aria-label={isBookmarked ? t('bookmarks.remove') : t('bookmarks.addLesson')}
             >
               <Icon name="bookmark" size={20} filled={isBookmarked} />
             </button>
             {isComplete ? (
-              <Badge tone="success" icon="check_circle">Completed</Badge>
+              <Badge tone="success" icon="check_circle">{t('learning.completed')}</Badge>
             ) : (
-              <Button size="sm" onClick={complete} icon="check">Mark complete</Button>
+              <Button size="sm" onClick={complete} icon="check">{t('learning.markComplete')}</Button>
             )}
           </div>
         </div>
         <ProgressBar
           value={module ? (module.lessonIds.indexOf(lesson.id) + 1) / module.lessonIds.length : 0}
           height={2}
-          label={`Progress through ${module?.title ?? 'module'}`}
+          label={t('learning.progressThrough', { module: module?.title ?? t('learning.module') })}
         />
       </header>
 
@@ -178,24 +181,26 @@ export default function Lesson() {
               {module && (
                 <Link to={`/curriculum/${module.slug}`}>
                   <Badge tone="primary">
-                    Module {String(module.order).padStart(2, '0')} · {module.shortTitle}
+                    {t('learning.moduleNumber', { order: String(module.order).padStart(2, '0') })}
+                    {' · '}
+                    <Authored>{module.shortTitle}</Authored>
                   </Badge>
                 </Link>
               )}
               <DifficultyBadge difficulty={lesson.difficulty} />
-              <Badge tone="neutral" icon="schedule">{lesson.estimatedMinutes} min</Badge>
-              <Badge tone="neutral" icon="star">+{lesson.xp} XP</Badge>
+              <Badge tone="neutral" icon="schedule">{t('common.minutes', { count: lesson.estimatedMinutes })}</Badge>
+              <Badge tone="neutral" icon="star">{t('common.xpPlus', { count: lesson.xp })}</Badge>
             </div>
 
-            <h1 className="font-display text-display-lg text-on-surface">{lesson.title}</h1>
-            <p className="mt-3 max-w-prose font-body-lg leading-8 text-on-surface-variant">{lesson.description}</p>
+            <h1 className="font-display text-display-lg text-on-surface"><Authored>{lesson.title}</Authored></h1>
+            <p className="mt-3 max-w-prose font-body-lg leading-8 text-on-surface-variant"><Authored>{lesson.description}</Authored></p>
           </div>
 
           {/* Objectives */}
           <Card className="mb-10 p-5">
             <p className="mb-3 flex items-center gap-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
               <Icon name="target" size={14} />
-              What you will be able to do
+              {t('learning.objectives')}
             </p>
             <ul className="space-y-2">
               {lesson.learningObjectives.map((objective, i) => (
@@ -226,10 +231,10 @@ export default function Lesson() {
           {trailingExercises.length > 0 && (
             <section className="mt-14">
               <h2 className="mb-2 border-b border-outline-variant pb-2 font-heading text-headline-sm text-on-surface">
-                Practice
+                {t('learning.practiceHeading')}
               </h2>
               <p className="mb-6 font-body-md text-on-surface-variant">
-                Reading is not the same as knowing. Work through these before moving on.
+                {t('learning.practiceIntro')}
               </p>
               <div className="space-y-5">
                 {trailingExercises.map((exercise) => (
@@ -243,7 +248,7 @@ export default function Lesson() {
           {lesson.quiz?.questions?.length > 0 && (
             <section className="mt-14">
               <h2 className="mb-6 border-b border-outline-variant pb-2 font-heading text-headline-sm text-on-surface">
-                Check your understanding
+                {t('learning.checkUnderstanding')}
               </h2>
               <QuizRunner quiz={lesson.quiz} />
             </section>
@@ -252,14 +257,14 @@ export default function Lesson() {
           {/* Summary */}
           <section className="mt-14">
             <h2 className="mb-6 border-b border-outline-variant pb-2 font-heading text-headline-sm text-on-surface">
-              Summary
+              {t('learning.summary')}
             </h2>
-            <p className="max-w-prose font-body-lg leading-8 text-on-surface-variant">{lesson.summary}</p>
+            <p className="max-w-prose font-body-lg leading-8 text-on-surface-variant"><Authored>{lesson.summary}</Authored></p>
 
             <div className="mt-6 rounded-lg border border-primary/30 bg-primary/5 p-5">
               <p className="mb-3 flex items-center gap-2 font-mono text-label-caps uppercase tracking-wider text-primary-ink">
                 <Icon name="key" size={14} />
-                Key takeaways
+                {t('learning.keyTakeaways')}
               </p>
               <ul className="space-y-2">
                 {lesson.keyTakeaways.map((takeaway, i) => (
@@ -277,15 +282,15 @@ export default function Lesson() {
             <Card className="mt-8 p-5">
               <p className="mb-3 flex items-center gap-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
                 <Icon name="record_voice_over" size={14} />
-                This comes up in interviews
+                {t('learning.comesUpInInterviews')}
               </p>
               <ul className="space-y-1.5">
                 {lesson.interviewConnections.map((q, i) => (
-                  <li key={i} className="font-body-md text-on-surface-variant">“{q}”</li>
+                  <li key={i} className="font-body-md text-on-surface-variant">“<Authored>{q}</Authored>”</li>
                 ))}
               </ul>
               <Button to="/interview" variant="secondary" size="sm" className="mt-4" icon="arrow_forward">
-                Practise interview questions
+                {t('learning.practiseInterviewQuestions')}
               </Button>
             </Card>
           )}
@@ -294,7 +299,7 @@ export default function Lesson() {
           {lesson.relatedLessons?.length > 0 && (
             <section className="mt-10">
               <p className="mb-3 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-                Related lessons
+                {t('learning.relatedLessons')}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {lesson.relatedLessons.map((id) => {
@@ -310,8 +315,8 @@ export default function Lesson() {
                       interactive
                       className="block p-4"
                     >
-                      <p className="font-body-sm font-medium text-on-surface">{related.title}</p>
-                      <p className="mt-1 line-clamp-2 font-body-sm text-on-surface-variant">{related.description}</p>
+                      <p className="font-body-sm font-medium text-on-surface"><Authored>{related.title}</Authored></p>
+                      <p className="mt-1 line-clamp-2 font-body-sm text-on-surface-variant"><Authored>{related.description}</Authored></p>
                     </Card>
                   );
                 })}
@@ -323,24 +328,23 @@ export default function Lesson() {
           <div className="mt-14 border-t border-outline-variant pt-8">
             {!isComplete && (
               <div className="mb-8 rounded-lg border border-outline-variant bg-surface-container-low p-6 text-center">
-                <p className="font-heading text-title-md text-on-surface">Finished this lesson?</p>
+                <p className="font-heading text-title-md text-on-surface">{t('learning.finishedThisLesson')}</p>
                 <p className="mx-auto mt-1 max-w-md font-body-sm text-on-surface-variant">
-                  Marking it complete records your progress and earns {lesson.xp} XP. Your mastery
-                  score, though, comes from the exercises and quiz above.
+                  {t('learning.markCompleteExplainer', { xp: lesson.xp })}
                 </p>
                 <Button className="mt-5" size="lg" onClick={complete} icon="check_circle">
-                  Mark complete{next ? ' and continue' : ''}
+                  {next ? t('learning.markCompleteAndContinue') : t('learning.markComplete')}
                 </Button>
               </div>
             )}
 
-            <nav className="grid gap-3 sm:grid-cols-2" aria-label="Lesson navigation">
+            <nav className="grid gap-3 sm:grid-cols-2" aria-label={t('learning.lessonNavigation')}>
               {previous ? (
                 <Card as="button" type="button" onClick={() => goToLesson(previous)} interactive className="p-4 text-left">
                   <p className="flex items-center gap-1.5 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-                    <Icon name="arrow_back" size={13} /> Previous
+                    <Icon name="arrow_back" size={13} /> {t('common.previous')}
                   </p>
-                  <p className="mt-1.5 font-body-md font-medium text-on-surface">{previous.title}</p>
+                  <p className="mt-1.5 font-body-md font-medium text-on-surface"><Authored>{previous.title}</Authored></p>
                 </Card>
               ) : (
                 <div />
@@ -348,9 +352,9 @@ export default function Lesson() {
               {next && (
                 <Card as="button" type="button" onClick={() => goToLesson(next)} interactive className="p-4 text-right">
                   <p className="flex items-center justify-end gap-1.5 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-                    Next <Icon name="arrow_forward" size={13} />
+                    {t('common.next')} <Icon name="arrow_forward" size={13} />
                   </p>
-                  <p className="mt-1.5 font-body-md font-medium text-on-surface">{next.title}</p>
+                  <p className="mt-1.5 font-body-md font-medium text-on-surface"><Authored>{next.title}</Authored></p>
                 </Card>
               )}
             </nav>
@@ -362,9 +366,9 @@ export default function Lesson() {
           <aside className="hidden xl:block">
             <div className="sticky top-24">
               <p className="mb-3 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-                On this page
+                {t('learning.onThisPage')}
               </p>
-              <nav aria-label="On this page">
+              <nav aria-label={t('learning.onThisPage')}>
                 <ul className="space-y-1 border-l border-outline-variant">
                   {headings.map((h) => (
                     <li key={h.id}>
@@ -377,7 +381,7 @@ export default function Lesson() {
                             : 'border-transparent text-on-surface-variant hover:border-outline hover:text-on-surface',
                         )}
                       >
-                        {h.text}
+                        <Authored>{h.text}</Authored>
                       </a>
                     </li>
                   ))}
@@ -386,9 +390,13 @@ export default function Lesson() {
 
               <div className="mt-6 border-t border-outline-variant pt-4">
                 <p className="font-body-sm text-on-surface-variant">
-                  {lesson.estimatedMinutes} min read
-                  {exercises.length > 0 && ` · ${exercises.length} exercise${exercises.length === 1 ? '' : 's'}`}
-                  {lesson.quiz?.questions?.length > 0 && ` · ${lesson.quiz.questions.length} quiz questions`}
+                  {[
+                    t('learning.minRead', { count: lesson.estimatedMinutes }),
+                    exercises.length > 0 ? t('common.exerciseCount', { count: exercises.length }) : null,
+                    lesson.quiz?.questions?.length > 0
+                      ? t('learning.quizQuestionCount', { count: lesson.quiz.questions.length })
+                      : null,
+                  ].filter(Boolean).join(' · ')}
                 </p>
               </div>
             </div>

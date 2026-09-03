@@ -169,8 +169,9 @@ export function UserStateProvider({ children }) {
         if (remote && gained > 0) {
           toast.show({
             tone: 'success',
-            title: 'Progress merged',
-            message: `${gained} item${gained === 1 ? '' : 's'} from this browser were added to your account.`,
+            titleKey: 'auth.progressMerged',
+            messageKey: 'auth.progressMergedBody',
+            vars: { count: gained },
           });
         }
         return merged;
@@ -211,7 +212,12 @@ export function UserStateProvider({ children }) {
           // Defer so we never call setState-in-render on the toast provider.
           queueMicrotask(() => {
             for (const a of newlyUnlocked) {
-              toast.show({ tone: 'achievement', title: 'Achievement unlocked', message: a.title, icon: a.icon });
+              toast.show({
+                tone: 'achievement',
+                titleKey: 'achievements.unlockedToast',
+                messageKey: `achievements.items.${a.id}.title`,
+                icon: a.icon,
+              });
             }
           });
         }

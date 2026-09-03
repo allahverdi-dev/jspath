@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { HighlightedCode } from '../../components/code/CodeBlock.jsx';
 import { Card, Button, Icon, Badge, SectionLabel, cx } from '../../components/ui/index.jsx';
 import { InlineMarkup } from '../../components/learning/InlineMarkup.jsx';
+import { Authored } from '../../components/learning/Authored.jsx';
 import { useUserState } from '../../state/UserStateProvider.jsx';
+import { useT } from '../../i18n/index.jsx';
+import { INTERVIEW_LEVEL_KEY, INTERVIEW_KIND_KEY } from '../../content/schema/types.js';
 
 /**
  * One interview question, with a deliberate reveal flow.
@@ -13,6 +16,7 @@ import { useUserState } from '../../state/UserStateProvider.jsx';
  */
 export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) {
   const { state, actions } = useUserState();
+  const t = useT();
   const [revealed, setRevealed] = useState(false);
   const [choice, setChoice] = useState(null);
   const [checkedPoints, setCheckedPoints] = useState([]);
@@ -43,9 +47,11 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
     <Card className="p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Badge tone="neutral">{question.topic}</Badge>
-          <Badge tone="info">{question.level}</Badge>
-          {question.kind && question.kind !== 'concept' && <Badge tone="warning">{question.kind}</Badge>}
+          <Badge tone="neutral"><Authored>{question.topic}</Authored></Badge>
+          <Badge tone="info">{INTERVIEW_LEVEL_KEY[question.level] ? t(INTERVIEW_LEVEL_KEY[question.level]) : question.level}</Badge>
+          {question.kind && question.kind !== 'concept' && (
+            <Badge tone="warning">{INTERVIEW_KIND_KEY[question.kind] ? t(INTERVIEW_KIND_KEY[question.kind]) : question.kind}</Badge>
+          )}
         </div>
         {bookmarkable && (
           <button
@@ -53,7 +59,7 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
             onClick={() => actions.toggleBookmark('interview', question.id, { title: question.question, to: `/interview/question/${question.id}` })}
             className={cx('rounded p-1.5 transition', bookmarked ? 'text-primary-ink' : 'text-on-surface-variant hover:text-on-surface')}
             aria-pressed={bookmarked}
-            aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark this question'}
+            aria-label={bookmarked ? t('bookmarks.remove') : t('bookmarks.addQuestion')}
           >
             <Icon name="bookmark" size={19} filled={bookmarked} />
           </button>
@@ -70,7 +76,7 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
 
       {objective && (
         <fieldset className="mt-5 space-y-2">
-          <legend className="sr-only">Choose an answer</legend>
+          <legend className="sr-only">{t('learning.chooseAnswer')}</legend>
           {question.options.map((option, i) => (
             <label
               key={i}
@@ -103,11 +109,11 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
         <div className="mt-5">
           {!objective && (
             <p className="mb-3 font-body-sm text-on-surface-variant">
-              Answer out loud first, as you would in the room. Then reveal and compare.
+              {t('interview.answerOutLoud')}
             </p>
           )}
           <Button onClick={reveal} disabled={objective && choice == null} icon="visibility">
-            Reveal answer
+            {t('interview.reveal')}
           </Button>
         </div>
       ) : (
@@ -116,18 +122,23 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
             <div className={cx('rounded border px-4 py-3', correct ? 'border-success/40 bg-success/10' : 'border-error/40 bg-error/10')}>
               <p className={cx('flex items-center gap-2 font-body-sm font-bold', correct ? 'text-success' : 'text-error')}>
                 <Icon name={correct ? 'check_circle' : 'cancel'} size={16} filled />
-                {correct ? 'Correct' : <>The answer is: <span className="whitespace-pre-wrap"><InlineMarkup text={question.options[question.correct]} /></span></>}
+                {correct ? t('interview.correct') : (
+                  <>
+                    {t('interview.theAnswerIs')}
+                    <span className="whitespace-pre-wrap"><InlineMarkup text={question.options[question.correct]} /></span>
+                  </>
+                )}
               </p>
             </div>
           )}
 
           <div className="rounded border border-primary/30 bg-primary/5 px-4 py-3">
-            <SectionLabel className="mb-1.5">The 30-second answer</SectionLabel>
+            <SectionLabel className="mb-1.5">{t('interview.thirtySecondAnswer')}</SectionLabel>
             <p className="font-body-md leading-7 text-on-surface"><InlineMarkup text={question.shortAnswer} /></p>
           </div>
 
           <div>
-            <SectionLabel className="mb-2">Going deeper</SectionLabel>
+            <SectionLabel className="mb-2">{t('interview.goingDeeper')}</SectionLabel>
             <div className="space-y-3">
               {question.deepAnswer.map((p, i) => (
                 <p key={i} className="font-body-md leading-7 text-on-surface-variant"><InlineMarkup text={p} /></p>
@@ -142,7 +153,7 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
           )}
 
           <div>
-            <SectionLabel className="mb-2">Did your answer cover these?</SectionLabel>
+            <SectionLabel className="mb-2">{t('interview.didYourAnswerCover')}</SectionLabel>
             <ul className="space-y-1.5">
               {question.keyPoints.map((point, i) => (
                 <li key={i}>
@@ -159,13 +170,13 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
               ))}
             </ul>
             <p className="mt-2 font-body-sm text-on-surface-variant">
-              {checkedPoints.length} of {question.keyPoints.length} covered
+              {t('interview.pointsCovered', { done: checkedPoints.length, total: question.keyPoints.length })}
             </p>
           </div>
 
           {question.commonMistakes?.length > 0 && (
             <div className="rounded border border-error/30 bg-error/5 px-4 py-3">
-              <SectionLabel className="mb-2">Common mistakes</SectionLabel>
+              <SectionLabel className="mb-2">{t('interview.commonMistakes')}</SectionLabel>
               <ul className="space-y-1.5">
                 {question.commonMistakes.map((m, i) => (
                   <li key={i} className="flex items-start gap-2 font-body-sm text-on-surface-variant">
@@ -178,7 +189,7 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
 
           {question.followUps?.length > 0 && (
             <div>
-              <SectionLabel className="mb-2">Likely follow-ups</SectionLabel>
+              <SectionLabel className="mb-2">{t('interview.likelyFollowUps')}</SectionLabel>
               <ul className="space-y-1.5">
                 {question.followUps.map((f, i) => (
                   <li key={i} className="font-body-sm text-on-surface-variant">“<InlineMarkup text={f} />”</li>
@@ -189,22 +200,22 @@ export function InterviewAnswer({ question, onAnswered, bookmarkable = false }) 
 
           {!objective && !rated && (
             <div className="border-t border-outline-variant pt-4">
-              <SectionLabel className="mb-2">How well did you answer?</SectionLabel>
+              <SectionLabel className="mb-2">{t('interview.rateYourself')}</SectionLabel>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { rating: 1, label: 'Not at all' },
-                  { rating: 2, label: 'Partly' },
-                  { rating: 3, label: 'Mostly' },
-                  { rating: 4, label: 'Confidently' },
+                  { rating: 1, labelKey: 'interview.rateNotAtAll' },
+                  { rating: 2, labelKey: 'interview.ratePartly' },
+                  { rating: 3, labelKey: 'interview.rateMostly' },
+                  { rating: 4, labelKey: 'interview.rateConfidently' },
                 ].map((r) => (
                   <Button key={r.rating} variant="secondary" size="sm" onClick={() => selfRate(r.rating)}>
-                    {r.label}
+                    {t(r.labelKey)}
                   </Button>
                 ))}
               </div>
             </div>
           )}
-          {rated && <p className="font-body-sm text-success">Recorded — this feeds your weak-topic list.</p>}
+          {rated && <p className="font-body-sm text-success">{t('interview.recorded')}</p>}
         </div>
       )}
     </Card>

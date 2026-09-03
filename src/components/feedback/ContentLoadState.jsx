@@ -1,5 +1,6 @@
 import { EmptyState, Button } from '../ui/index.jsx';
 import { PREMIUM_STATUS } from '../../services/premiumContent.js';
+import { useT } from '../../i18n/index.jsx';
 
 /**
  * Why a piece of content did not open.
@@ -13,16 +14,20 @@ import { PREMIUM_STATUS } from '../../services/premiumContent.js';
  *
  * So each cause gets its own honest message and its own useful way forward.
  */
-export function ContentLoadState({ error, kind = 'content', backTo = '/dashboard', backLabel = 'Go back', onRetry }) {
+export function ContentLoadState({ error, kind = 'content', backTo = '/dashboard', backLabel, onRetry }) {
+  const t = useT();
   const status = error?.premiumStatus;
+  // `kind` stays a stable internal token; only its display form is translated.
+  const kindLabel = t(`billing.kind${kind[0].toUpperCase()}${kind.slice(1)}`);
+  const back = backLabel ?? t('errors.goBack');
 
   if (status === PREMIUM_STATUS.NOT_ENTITLED) {
     return (
       <EmptyState
         icon="lock"
-        title={`This ${kind} is included with Pro`}
-        message="Your account does not currently have Pro access. Everything you have already done stays exactly as it is."
-        action={<Button to="/pricing" icon="workspace_premium">View Pro options</Button>}
+        title={t('billing.notEntitledTitle', { kind: kindLabel })}
+        message={t('billing.notEntitledBody')}
+        action={<Button to="/pricing" icon="workspace_premium">{t('billing.viewProOptions')}</Button>}
       />
     );
   }
@@ -31,9 +36,9 @@ export function ContentLoadState({ error, kind = 'content', backTo = '/dashboard
     return (
       <EmptyState
         icon="login"
-        title="Sign in to open this"
-        message="Pro content is verified with your account. Signing in restores access — your progress is kept either way."
-        action={<Button to="/login" icon="login">Sign in</Button>}
+        title={t('auth.signInToOpen')}
+        message={t('auth.signInToOpenBody')}
+        action={<Button to="/login" icon="login">{t('auth.logIn')}</Button>}
       />
     );
   }
@@ -42,12 +47,12 @@ export function ContentLoadState({ error, kind = 'content', backTo = '/dashboard
     return (
       <EmptyState
         icon="cloud_off"
-        title="Could not load that right now"
-        message="The content service did not respond. This is usually temporary — nothing about your progress or your plan has changed."
+        title={t('errors.unavailableTitle')}
+        message={t('errors.unavailableBody')}
         action={
           <div className="flex flex-wrap justify-center gap-3">
-            {onRetry && <Button onClick={onRetry} icon="refresh">Try again</Button>}
-            <Button to={backTo} variant="secondary">{backLabel}</Button>
+            {onRetry && <Button onClick={onRetry} icon="refresh">{t('common.retry')}</Button>}
+            <Button to={backTo} variant="secondary">{back}</Button>
           </div>
         }
       />
@@ -55,12 +60,17 @@ export function ContentLoadState({ error, kind = 'content', backTo = '/dashboard
   }
 
   // Genuinely absent, or an unexpected failure: say so plainly, never upsell.
+  //
+  // Callers pass a translation key rather than a sentence. A raw `error.message`
+  // is an untranslated technical string ("Failed to fetch dynamically imported
+  // module") that told the learner nothing and would be the only English left on
+  // an otherwise translated page, so it is not rendered.
   return (
     <EmptyState
       icon="search_off"
-      title={`${kind[0].toUpperCase()}${kind.slice(1)} not found`}
-      message={error?.message ?? `That ${kind} does not exist.`}
-      action={<Button to={backTo} variant="secondary">{backLabel}</Button>}
+      title={t('errors.contentNotFound', { kind: kindLabel })}
+      message={error?.messageKey ? t(error.messageKey) : t('errors.contentDoesNotExist', { kind: kindLabel })}
+      action={<Button to={backTo} variant="secondary">{back}</Button>}
     />
   );
 }

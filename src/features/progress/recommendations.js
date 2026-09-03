@@ -3,8 +3,13 @@
  *
  * There is no AI tutor here and the product never pretends otherwise. These are
  * explicit, explainable rules over the learner's own progress data, and every
- * recommendation carries a `reason` string that is shown in the UI — so a learner
- * always knows *why* something was suggested.
+ * recommendation carries a reason that is shown in the UI — so a learner always
+ * knows *why* something was suggested.
+ *
+ * The reason and meta are emitted as translation keys plus variables rather than
+ * finished sentences: this module is pure logic and has no locale, and a
+ * pre-built English string could not be translated by the component that renders
+ * it.
  */
 import { weakTopics } from '../mastery/masteryEngine.js';
 import { dayKey } from './progressEngine.js';
@@ -54,8 +59,10 @@ export function recommendations(state, content, { limit = 4, includeMastery = tr
         description: exercise.instructions,
         to: `/practice/exercise/${exercise.id}`,
         icon: 'fitness_center',
-        meta: `+${exercise.xp} XP`,
-        reason: `${topic.label} is your weakest started topic (${Math.round(topic.score * 100)}%)`,
+        metaKey: 'common.xpPlus',
+        metaVars: { count: exercise.xp },
+        reasonKey: 'dashboard.reasonWeakest',
+        reasonVars: { topic: topic.label, percent: Math.round(topic.score * 100) },
       });
       continue;
     }
@@ -71,8 +78,10 @@ export function recommendations(state, content, { limit = 4, includeMastery = tr
         description: lesson.description,
         to: `/learn/${module.slug}/${lesson.slug}`,
         icon: 'school',
-        meta: `${lesson.estimatedMinutes} min`,
-        reason: `Strengthens ${topic.label}, currently at ${Math.round(topic.score * 100)}%`,
+        metaKey: 'common.minutes',
+        metaVars: { count: lesson.estimatedMinutes },
+        reasonKey: 'dashboard.reasonStrengthens',
+        reasonVars: { topic: topic.label, percent: Math.round(topic.score * 100) },
       });
     }
   }
@@ -89,8 +98,9 @@ export function recommendations(state, content, { limit = 4, includeMastery = tr
         description: exercise.instructions,
         to: `/practice/exercise/${exercise.id}`,
         icon: 'refresh',
-        meta: `+${exercise.xp} XP`,
-        reason: 'You did not solve this last time',
+        metaKey: 'common.xpPlus',
+        metaVars: { count: exercise.xp },
+        reasonKey: 'dashboard.reasonUnsolved',
       });
     }
   }
@@ -105,8 +115,9 @@ export function recommendations(state, content, { limit = 4, includeMastery = tr
       description: next.lesson.description,
       to: `/learn/${next.module.slug}/${next.lesson.slug}`,
       icon: 'play_arrow',
-      meta: `${next.lesson.estimatedMinutes} min`,
-      reason: 'The next lesson on your path',
+      metaKey: 'common.minutes',
+      metaVars: { count: next.lesson.estimatedMinutes },
+      reasonKey: 'dashboard.reasonNextLesson',
     });
   }
 
@@ -120,8 +131,9 @@ export function recommendations(state, content, { limit = 4, includeMastery = tr
       description: challenge.prompt,
       to: `/challenges/${challenge.slug}`,
       icon: 'trophy',
-      meta: `+${challenge.xp} XP`,
-      reason: 'Apply what you have learned',
+      metaKey: 'common.xpPlus',
+      metaVars: { count: challenge.xp },
+      reasonKey: 'dashboard.reasonApply',
     });
   }
 
@@ -172,7 +184,8 @@ export function reviewQueue(state, content) {
         out.push({
           ...mistake,
           to: `/learn/${module.slug}/${lesson.slug}`,
-          title: `Quiz: ${lesson.title}`,
+          titleKey: 'learning.quizNamed',
+          titleVars: { lesson: lesson.title },
           icon: 'quiz',
         });
       }

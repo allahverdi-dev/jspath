@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { search, groupResults, KIND_LABEL } from './searchIndex.js';
+import { search, groupResults, KIND_KEY } from './searchIndex.js';
 import { Icon, Badge, cx } from '../../components/ui/index.jsx';
 import { contentStats } from '../../content/registry.js';
 import { useModalFocus } from '../../hooks/useModalFocus.js';
 import { ContentAccessBadge } from '../../components/billing/ContentAccessBadge.jsx';
 import { InlineMarkup } from '../../components/learning/InlineMarkup.jsx';
+import { useT } from '../../i18n/index.jsx';
+import { DIFFICULTY_KEY } from '../../content/schema/types.js';
 
 const QUICK_LINKS = [
-  { label: 'Curriculum', to: '/curriculum', icon: 'school' },
-  { label: 'Practice Hub', to: '/practice', icon: 'fitness_center' },
-  { label: 'Playground', to: '/playground', icon: 'terminal' },
-  { label: 'Interview Prep', to: '/interview', icon: 'record_voice_over' },
-  { label: 'Cheat Sheets', to: '/cheat-sheets', icon: 'description' },
+  { labelKey: 'learning.curriculum', to: '/curriculum', icon: 'school' },
+  { labelKey: 'practice.title', to: '/practice', icon: 'fitness_center' },
+  { labelKey: 'playground.title', to: '/playground', icon: 'terminal' },
+  { labelKey: 'interview.title', to: '/interview', icon: 'record_voice_over' },
+  { labelKey: 'cheatSheets.title', to: '/cheat-sheets', icon: 'description' },
 ];
 
 /**
@@ -30,6 +32,7 @@ export function SearchOverlay({ open, onClose }) {
   const panelRef = useRef(null);
   useModalFocus(open, panelRef, onClose, inputRef);
   const navigate = useNavigate();
+  const t = useT();
 
   const results = useMemo(() => (query.trim().length >= 2 ? search(query, { limit: 24 }) : []), [query]);
   const groups = useMemo(() => groupResults(results), [results]);
@@ -85,7 +88,7 @@ export function SearchOverlay({ open, onClose }) {
         className="overlay-panel relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-2xl animate-slide-up sm:max-h-[85dvh]"
         role="dialog"
         aria-modal="true"
-        aria-label="Search JSPath"
+        aria-label={t('search.searchJSPath')}
       >
         <div className="flex shrink-0 items-center gap-2 border-b border-outline-variant px-3 sm:px-4">
           <Icon name="search" size={20} className="text-on-surface-variant" />
@@ -94,9 +97,9 @@ export function SearchOverlay({ open, onClose }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search lessons, methods, challenges, interview questions…"
+            placeholder={t('search.placeholderLong')}
             className="h-14 min-w-0 flex-1 bg-transparent font-body-md text-on-surface outline-none placeholder:text-on-surface-variant/70"
-            aria-label="Search content"
+            aria-label={t('search.searchContent')}
             role="combobox"
             aria-expanded="true"
             aria-controls="search-results"
@@ -107,7 +110,7 @@ export function SearchOverlay({ open, onClose }) {
           <kbd className="hidden rounded border border-outline-variant px-1.5 py-0.5 font-mono text-code-sm text-on-surface-variant sm:inline">
             ESC
           </kbd>
-          <button type="button" onClick={onClose} aria-label="Close search" className="flex shrink-0 items-center justify-center rounded p-2 text-on-surface-variant hover:bg-surface-container">
+          <button type="button" onClick={onClose} aria-label={t('search.closeSearch')} className="flex shrink-0 items-center justify-center rounded p-2 text-on-surface-variant hover:bg-surface-container">
             <Icon name="close" size={20} />
           </button>
         </div>
@@ -116,7 +119,7 @@ export function SearchOverlay({ open, onClose }) {
           {query.trim().length < 2 ? (
             <div className="p-2">
               <p className="px-2 pb-2 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-                Jump to
+                {t('search.jumpTo')}
               </p>
               {QUICK_LINKS.map((link) => (
                 <button
@@ -126,28 +129,31 @@ export function SearchOverlay({ open, onClose }) {
                   className="flex w-full items-center gap-3 rounded px-3 py-2.5 text-left transition-colors hover:bg-surface-container"
                 >
                   <Icon name={link.icon} size={18} className="text-on-surface-variant" />
-                  <span className="font-body-sm text-on-surface">{link.label}</span>
+                  <span className="font-body-sm text-on-surface">{t(link.labelKey)}</span>
                 </button>
               ))}
               <p className="px-3 pt-4 font-body-sm text-on-surface-variant">
-                Searching {contentStats.lessons} lessons, {contentStats.exercises} exercises,{' '}
-                {contentStats.challenges} challenges and {contentStats.interviewQuestions} interview questions.
+                {t('search.searchingAcross', {
+                  lessons: contentStats.lessons,
+                  exercises: contentStats.exercises,
+                  challenges: contentStats.challenges,
+                  questions: contentStats.interviewQuestions,
+                })}
               </p>
             </div>
           ) : flat.length === 0 ? (
             <div className="px-4 py-12 text-center">
               <Icon name="search_off" size={32} className="mx-auto mb-3 text-on-surface-variant" />
-              <p className="font-body-md text-on-surface">No results for “{query}”</p>
+              <p className="font-body-md text-on-surface">{t('search.noResults', { query })}</p>
               <p className="mt-1 font-body-sm text-on-surface-variant">
-                Try a method name like <code className="font-mono">reduce</code>, or a concept like{' '}
-                <code className="font-mono">closure</code>.
+                {t('search.noResultsHint')}
               </p>
             </div>
           ) : (
             groups.map((group) => (
               <div key={group.kind} className="mb-2">
                 <p className="px-3 py-1.5 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-                  {KIND_LABEL[group.kind]}
+                  {t(KIND_KEY[group.kind])}
                 </p>
                 {group.items.map((item) => {
                   cursor += 1;
@@ -172,7 +178,11 @@ export function SearchOverlay({ open, onClose }) {
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="truncate font-body-sm font-medium text-on-surface"><InlineMarkup text={item.title} /></span>
-                          {item.difficulty && <Badge tone="neutral">{item.difficulty}</Badge>}
+                          {item.difficulty && (
+                            <Badge tone="neutral">
+                              {DIFFICULTY_KEY[item.difficulty] ? t(DIFFICULTY_KEY[item.difficulty]) : item.difficulty}
+                            </Badge>
+                          )}
                           <ContentAccessBadge kind={item.kind} id={item.id} />
                         </span>
                         {item.description && (
@@ -191,9 +201,9 @@ export function SearchOverlay({ open, onClose }) {
         </div>
 
         <div className="hidden shrink-0 items-center gap-4 border-t border-outline-variant px-4 py-2 font-mono text-code-sm text-on-surface-variant sm:flex">
-          <span className="flex items-center gap-1"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
-          <span className="flex items-center gap-1"><kbd>↵</kbd> open</span>
-          <span className="ml-auto">{flat.length > 0 && `${flat.length} result${flat.length === 1 ? '' : 's'}`}</span>
+          <span className="flex items-center gap-1"><kbd>↑</kbd><kbd>↓</kbd> {t('search.hintNavigate')}</span>
+          <span className="flex items-center gap-1"><kbd>↵</kbd> {t('search.hintOpen')}</span>
+          <span className="ml-auto">{flat.length > 0 && t('search.resultCount', { count: flat.length })}</span>
         </div>
       </div>
     </div>

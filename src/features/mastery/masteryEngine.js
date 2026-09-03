@@ -252,11 +252,17 @@ export function weakTopics(state, topics, content, { limit = 5, threshold = 0.6 
 }
 
 /** A friendly rank label derived from overall mastery — cosmetic only. */
-export function rankFor(score) {
-  if (score >= 0.9) return 'JavaScript Master';
-  if (score >= 0.75) return 'Advanced Dev';
-  if (score >= 0.55) return 'Intermediate Dev';
-  if (score >= 0.3) return 'Junior Dev';
-  if (score > 0) return 'Novice Dev';
-  return 'Getting Started';
+/**
+ * The learner's overall rank, as a stable token rather than a sentence.
+ *
+ * Returning a key keeps this module locale-free; `mastery.rank*` in the
+ * dictionaries holds the wording for each language.
+ */
+export function rankKeyFor(score) {
+  if (score >= 0.9) return 'mastery.rankMaster';
+  if (score >= 0.75) return 'mastery.rankAdvanced';
+  if (score >= 0.55) return 'mastery.rankIntermediate';
+  if (score >= 0.3) return 'mastery.rankJunior';
+  if (score > 0) return 'mastery.rankNovice';
+  return 'mastery.rankGettingStarted';
 }

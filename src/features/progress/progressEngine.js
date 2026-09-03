@@ -61,6 +61,8 @@ export function createInitialState(overrides = {}) {
     placement: null,
     settings: {
       theme: 'dark',
+      // Interface language. A display preference, never entitlement state.
+      locale: 'en',
       reduceMotion: false,
       fontScale: 1,
       editorFontSize: 14,

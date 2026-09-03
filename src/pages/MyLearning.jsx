@@ -5,9 +5,13 @@ import { contentIndex, lessonById } from '../content/registry.js';
 import { allTopicMastery } from '../features/mastery/masteryEngine.js';
 import { curriculumProgress, exerciseStats, quizAccuracy, minutesLearned } from '../features/progress/progressEngine.js';
 import { AdvancedAnalyticsGate } from '../components/billing/AdvancedAnalyticsGate.jsx';
+import { Authored } from '../components/learning/Authored.jsx';
+import { useI18n, useT } from '../i18n/index.jsx';
 
 export default function MyLearning() {
   const { state, xp, streak } = useUserState();
+  const t = useT();
+  const { formatDate, formatNumber } = useI18n();
 
   const topics = useMemo(() => allTopicMastery(state, contentIndex.topics, contentIndex), [state]);
   const progress = useMemo(() => curriculumProgress(state, contentIndex.modules), [state]);
@@ -17,7 +21,7 @@ export default function MyLearning() {
 
   const grouped = useMemo(() => {
     const out = {};
-    for (const t of topics) (out[t.group] ??= []).push(t);
+    for (const topic of topics) (out[topic.group] ??= []).push(topic);
     return out;
   }, [topics]);
 
@@ -25,45 +29,76 @@ export default function MyLearning() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="font-display text-display-lg text-on-surface">My Learning</h1>
+      <h1 className="font-display text-display-lg text-on-surface">{t('myLearning.title')}</h1>
       <p className="mt-2 font-body-lg text-on-surface-variant">
-        Your learning progress. Go deeper with Pro topic mastery and assessment evidence.
+        {t('myLearning.subtitle')} {t('myLearning.proUpsell')}
       </p>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Stat label="XP" value={xp.toLocaleString()} icon="bolt" tone="primary" hint={`${streak} day streak`} />
-        <Stat label="Lessons" value={`${progress.completed}/${progress.lessons}`} icon="school" />
-        <Stat label="Exercises solved" value={exStats.solved} icon="fitness_center" hint={exStats.accuracy != null ? `${Math.round(exStats.accuracy * 100)}% of attempted` : undefined} />
-        <Stat label="Quiz accuracy" value={accuracy == null ? '—' : `${Math.round(accuracy * 100)}%`} icon="quiz" hint={accuracy == null ? 'no quizzes taken yet' : undefined} />
-        <Stat label="Lesson time estimate" value={`${Math.floor(minutes / 60)}h ${minutes % 60}m`} icon="schedule" hint="Estimated duration of completed lessons, not tracked time" />
+        <Stat
+          label={t('dashboard.xp')}
+          value={formatNumber(xp)}
+          icon="bolt"
+          tone="primary"
+          hint={t('common.dayStreak', { count: streak })}
+        />
+        <Stat label={t('myLearning.lessons')} value={`${progress.completed}/${progress.lessons}`} icon="school" />
+        <Stat
+          label={t('myLearning.exercisesSolved')}
+          value={exStats.solved}
+          icon="fitness_center"
+          hint={exStats.accuracy != null ? t('myLearning.ofAttempted', { percent: Math.round(exStats.accuracy * 100) }) : undefined}
+        />
+        <Stat
+          label={t('myLearning.quizAccuracy')}
+          value={accuracy == null ? '—' : `${Math.round(accuracy * 100)}%`}
+          icon="quiz"
+          hint={accuracy == null ? t('myLearning.noQuizzesYet') : undefined}
+        />
+        <Stat
+          label={t('myLearning.lessonTimeEstimate')}
+          value={t('common.hoursMinutes', { hours: Math.floor(minutes / 60), minutes: minutes % 60 })}
+          icon="schedule"
+          hint={t('myLearning.lessonTimeHint')}
+        />
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
           <AdvancedAnalyticsGate>
-            <h2 className="mb-4 font-heading text-headline-sm text-on-surface">Advanced Analytics: skill tree</h2>
-            <p className="mb-4 font-body-sm text-on-surface-variant">Scores combine lesson coverage, attempt-weighted exercise and challenge solves, and your best quiz attempts. They are learning indicators, not a certification or a prediction of interview success.</p>
+            <h2 className="mb-4 font-heading text-headline-sm text-on-surface">{t('myLearning.skillTree')}</h2>
+            <p className="mb-4 font-body-sm text-on-surface-variant">{t('myLearning.masteryExplained')}</p>
             <div className="space-y-6">
               {Object.entries(grouped).map(([group, list]) => (
                 <div key={group}>
-                  <SectionLabel className="mb-3">{group}</SectionLabel>
+                  <SectionLabel className="mb-3"><Authored>{group}</Authored></SectionLabel>
                   <div className="space-y-2">
-                    {list.map((t) => (
-                      <Card key={t.topicId} className="p-4">
+                    {list.map((topic) => (
+                      <Card key={topic.topicId} className="p-4">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-body-md font-medium text-on-surface">{t.label}</span>
+                          <span className="font-body-md font-medium text-on-surface"><Authored>{topic.label}</Authored></span>
                           <div className="flex items-center gap-2">
-                            <MasteryBadge level={t.level} />
-                            <span className="font-mono text-code-md text-on-surface">{Math.round(t.score * 100)}%</span>
+                            <MasteryBadge level={topic.level} />
+                            <span className="font-mono text-code-md text-on-surface">{Math.round(topic.score * 100)}%</span>
                           </div>
                         </div>
-                        <ProgressBar value={t.score} className="mt-2.5" label={`${t.label} mastery`} />
+                        <ProgressBar
+                          value={topic.score}
+                          className="mt-2.5"
+                          label={t('dashboard.topicMasteryLabel', { topic: topic.label })}
+                        />
                         <p className="mt-2 font-body-sm text-on-surface-variant">
-                          {t.evidence.lessonsDone}/{t.evidence.lessonsAvailable} lessons ·{' '}
-                          {t.evidence.exercisesSolved}/{t.evidence.exercisesAvailable} exercises ·{' '}
-                          {t.evidence.challengesSolved}/{t.evidence.challengesAvailable} challenges ·{' '}
-                          {t.evidence.quizAccuracy == null ? 'no quiz data' : `${Math.round(t.evidence.quizAccuracy * 100)}% quiz accuracy`}
-                          {t.evidence.decayApplied && t.evidence.idleDays != null && ` · idle ${t.evidence.idleDays} days`}
+                          {[
+                            t('myLearning.evidenceLessons', { done: topic.evidence.lessonsDone, total: topic.evidence.lessonsAvailable }),
+                            t('myLearning.evidenceExercises', { done: topic.evidence.exercisesSolved, total: topic.evidence.exercisesAvailable }),
+                            t('myLearning.evidenceChallenges', { done: topic.evidence.challengesSolved, total: topic.evidence.challengesAvailable }),
+                            topic.evidence.quizAccuracy == null
+                              ? t('myLearning.noQuizData')
+                              : t('myLearning.evidenceQuiz', { percent: Math.round(topic.evidence.quizAccuracy * 100) }),
+                            topic.evidence.decayApplied && topic.evidence.idleDays != null
+                              ? t('myLearning.idleDays', { count: topic.evidence.idleDays })
+                              : null,
+                          ].filter(Boolean).join(' · ')}
                         </p>
                       </Card>
                     ))}
@@ -76,32 +111,34 @@ export default function MyLearning() {
 
         <div className="space-y-4 lg:col-span-4">
           <Card className="p-5">
-            <SectionLabel className="mb-3">How mastery is calculated</SectionLabel>
+            <SectionLabel className="mb-3">{t('myLearning.howMasteryCalculated')}</SectionLabel>
             <ul className="space-y-2 font-body-sm text-on-surface-variant">
-              <li>• Lessons completed — 30%</li>
-              <li>• Exercises solved — 30%</li>
-              <li>• Quiz accuracy — 25%</li>
-              <li>• Challenges solved — 15%</li>
+              <li>{t('myLearning.weightLessons')}</li>
+              <li>{t('myLearning.weightExercises')}</li>
+              <li>{t('myLearning.weightQuiz')}</li>
+              <li>{t('myLearning.weightChallenges')}</li>
             </ul>
             <p className="mt-3 font-body-sm text-on-surface-variant">
-              Reaching <strong className="text-on-surface">Mastered</strong> also requires real
-              assessment evidence — reading every lesson is not enough. Scores taper if a topic is
-              left untouched for three weeks.
+              {t('myLearning.masteredRequires', { mastered: t('mastery.mastered') })}
             </p>
           </Card>
 
           <Card className="p-5">
-            <SectionLabel className="mb-3">Recent activity</SectionLabel>
+            <SectionLabel className="mb-3">{t('myLearning.recentActivity')}</SectionLabel>
             {recent.length === 0 ? (
-              <EmptyState icon="timeline" title="Nothing recorded yet" message="Complete a lesson, exercise or quiz and it will show up here." />
+              <EmptyState
+                icon="timeline"
+                title={t('myLearning.nothingRecorded')}
+                message={t('myLearning.nothingRecordedBody')}
+              />
             ) : (
               <ul className="space-y-2">
                 {recent.map((a, i) => (
                   <li key={i} className="flex items-start gap-2 font-body-sm text-on-surface-variant">
                     <Icon name="circle" size={7} className="mt-2 shrink-0 text-primary-ink" filled />
                     <span className="min-w-0 flex-1">
-                      <span className="text-on-surface">{a.type.replace('.', ' ')}</span>
-                      <span className="ml-1 opacity-70">{new Date(a.at).toLocaleDateString()}</span>
+                      <span className="text-on-surface">{t('activity.' + a.type)}</span>
+                      <span className="ml-1 opacity-70">{formatDate(a.at, { dateStyle: 'medium' })}</span>
                     </span>
                   </li>
                 ))}

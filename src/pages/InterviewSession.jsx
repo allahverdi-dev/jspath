@@ -5,11 +5,15 @@ import { InterviewAnswer } from '../features/interview/InterviewAnswer.jsx';
 import { Card, Button, Icon, Badge, ProgressBar, Select, EmptyState, SectionLabel } from '../components/ui/index.jsx';
 import { ContentSkeleton } from '../components/feedback/PageSkeleton.jsx';
 import { Logo } from '../layouts/AppShell.jsx';
+import { useT } from '../i18n/index.jsx';
+import { INTERVIEW_LEVELS, INTERVIEW_LEVEL_KEY } from '../content/schema/types.js';
+import { Authored } from '../components/learning/Authored.jsx';
 
-const LEVELS = ['junior', 'junior+', 'intermediate', 'advanced'];
+const LEVELS = INTERVIEW_LEVELS;
 
 export default function InterviewSession() {
   const navigate = useNavigate();
+  const t = useT();
   const [config, setConfig] = useState({ level: 'all', topic: 'all', count: 10, timed: false });
   const [started, setStarted] = useState(false);
   const [questions, setQuestions] = useState(null);
@@ -42,7 +46,12 @@ export default function InterviewSession() {
   if (interviewQuestions.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20">
-        <EmptyState icon="hourglass_empty" title="No interview questions in this build" message="The interview bank has not been authored yet." action={<Button to="/dashboard">Back to dashboard</Button>} />
+        <EmptyState
+          icon="hourglass_empty"
+          title={t('interview.noQuestions')}
+          message={t('interview.noQuestionsBody')}
+          action={<Button to="/dashboard">{t('nav.backToDashboard')}</Button>}
+        />
       </div>
     );
   }
@@ -55,7 +64,7 @@ export default function InterviewSession() {
       <header className="safe-top sticky top-0 z-30 border-b border-outline-variant bg-surface/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-3 px-4">
           <button type="button" onClick={() => navigate('/interview')} className="flex items-center gap-1.5 font-body-sm text-on-surface-variant transition hover:text-on-surface">
-            <Icon name="close" size={18} /> Exit
+            <Icon name="close" size={18} /> {t('interview.exit')}
           </button>
           <Logo size="sm" className="mx-auto hidden sm:flex" />
           {started && questions && !finished && (
@@ -65,60 +74,59 @@ export default function InterviewSession() {
             </span>
           )}
         </div>
-        {started && questions && <ProgressBar value={questions.length ? index / questions.length : 0} height={2} label="Session progress" />}
+        {started && questions && <ProgressBar value={questions.length ? index / questions.length : 0} height={2} label={t('interview.sessionProgress')} />}
       </header>
 
       <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-8">
         {!started ? (
           <Card className="p-6">
-            <h1 className="font-display text-headline-md text-on-surface">Interview practice session</h1>
+            <h1 className="font-display text-headline-md text-on-surface">{t('interview.sessionTitle')}</h1>
             <p className="mt-2 font-body-md text-on-surface-variant">
-              Answer out loud before revealing. Objective questions are scored automatically;
-              conceptual answers you assess yourself against a checklist.
+              {t('interview.sessionIntro')}
             </p>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <Select label="Level" value={config.level} onChange={(e) => setConfig({ ...config, level: e.target.value })}>
-                <option value="all">All levels</option>
-                {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+              <Select label={t('interview.level')} value={config.level} onChange={(e) => setConfig({ ...config, level: e.target.value })}>
+                <option value="all">{t('interview.allLevels')}</option>
+                {LEVELS.map((l) => <option key={l} value={l}>{t(INTERVIEW_LEVEL_KEY[l])}</option>)}
               </Select>
-              <Select label="Topic" value={config.topic} onChange={(e) => setConfig({ ...config, topic: e.target.value })}>
-                <option value="all">All topics</option>
-                {topics.map((t) => <option key={t} value={t}>{t}</option>)}
+              <Select label={t('interview.topic')} value={config.topic} onChange={(e) => setConfig({ ...config, topic: e.target.value })}>
+                <option value="all">{t('interview.allTopics')}</option>
+                {topics.map((name) => <option key={name} value={name} lang="en">{name}</option>)}
               </Select>
-              <Select label="Questions" value={config.count} onChange={(e) => setConfig({ ...config, count: Number(e.target.value) })}>
+              <Select label={t('interview.questions')} value={config.count} onChange={(e) => setConfig({ ...config, count: Number(e.target.value) })}>
                 {[5, 10, 15, 20].map((n) => <option key={n} value={n}>{n}</option>)}
               </Select>
             </div>
             <label className="mt-4 flex items-center gap-2 font-body-sm text-on-surface-variant">
               <input type="checkbox" checked={config.timed} onChange={(e) => setConfig({ ...config, timed: e.target.checked })} className="accent-[rgb(var(--c-primary))]" />
-              Show a timer
+              {t('interview.showTimer')}
             </label>
-            <p className="mt-4 font-body-sm text-on-surface-variant">{pool.length} question{pool.length === 1 ? '' : 's'} match your filters.</p>
-            <Button className="mt-6" size="lg" onClick={start} disabled={pool.length === 0} icon="play_arrow">Start session</Button>
+            <p className="mt-4 font-body-sm text-on-surface-variant">{t('interview.matchingFilters', { count: pool.length })}</p>
+            <Button className="mt-6" size="lg" onClick={start} disabled={pool.length === 0} icon="play_arrow">{t('interview.startSession')}</Button>
           </Card>
         ) : !questions ? (
           <ContentSkeleton lines={8} />
         ) : finished ? (
           <Card className="p-6">
-            <h1 className="font-heading text-headline-md text-on-surface">Session complete</h1>
+            <h1 className="font-heading text-headline-md text-on-surface">{t('interview.sessionComplete')}</h1>
             <p className="mt-2 font-body-md text-on-surface-variant">
-              You worked through {questions.length} questions and felt confident on {correctCount}.
+              {t('interview.sessionSummary', { total: questions.length, correct: correctCount })}
             </p>
-            <ProgressBar value={questions.length ? correctCount / questions.length : 0} className="mt-5" height={6} label="Session score" />
+            <ProgressBar value={questions.length ? correctCount / questions.length : 0} className="mt-5" height={6} label={t('interview.sessionScore')} />
             <div className="mt-6">
-              <SectionLabel className="mb-2">Weakest in this session</SectionLabel>
+              <SectionLabel className="mb-2">{t('interview.weakestInSession')}</SectionLabel>
               <div className="flex flex-wrap gap-2">
-                {[...new Set(results.filter((r) => !r.correct).map((r) => r.topic))].map((t) => (
-                  <Badge key={t} tone="warning">{t}</Badge>
+                {[...new Set(results.filter((r) => !r.correct).map((r) => r.topic))].map((name) => (
+                  <Badge key={name} tone="warning"><Authored>{name}</Authored></Badge>
                 ))}
-                {results.every((r) => r.correct) && <p className="font-body-sm text-success">Nothing flagged — strong session.</p>}
+                {results.every((r) => r.correct) && <p className="font-body-sm text-success">{t('interview.nothingFlagged')}</p>}
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button onClick={() => { setStarted(false); setQuestions(null); setIndex(0); setResults([]); setSeconds(0); }} icon="refresh">
-                New session
+                {t('interview.newSession')}
               </Button>
-              <Button as={Link} to="/interview" variant="secondary">Back to question bank</Button>
+              <Button as={Link} to="/interview" variant="secondary">{t('interview.backToQuestionBank')}</Button>
             </div>
           </Card>
         ) : (
@@ -130,7 +138,7 @@ export default function InterviewSession() {
             />
             <div className="mt-4 flex justify-end">
               <Button onClick={() => setIndex((i) => i + 1)} iconRight="arrow_forward">
-                {index < questions.length - 1 ? 'Next question' : 'Finish session'}
+                {index < questions.length - 1 ? t('interview.nextQuestion') : t('interview.finishSession')}
               </Button>
             </div>
           </>

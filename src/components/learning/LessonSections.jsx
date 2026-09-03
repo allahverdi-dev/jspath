@@ -4,14 +4,15 @@ import { Icon, Badge, cx } from '../ui/index.jsx';
 import { SECTION, CALLOUT_TONE } from '../../content/schema/types.js';
 import { Diagram } from '../viz/Diagram.jsx';
 import { InlineMarkup } from './InlineMarkup.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 const CALLOUT_STYLES = {
-  [CALLOUT_TONE.TIP]: { border: 'border-success/40', bg: 'bg-success/5', icon: 'lightbulb', color: 'text-success', label: 'Tip' },
-  [CALLOUT_TONE.WARNING]: { border: 'border-warning/40', bg: 'bg-warning/5', icon: 'warning', color: 'text-warning', label: 'Watch out' },
-  [CALLOUT_TONE.DANGER]: { border: 'border-error/40', bg: 'bg-error/5', icon: 'dangerous', color: 'text-error', label: 'Danger' },
-  [CALLOUT_TONE.INFO]: { border: 'border-info/40', bg: 'bg-info/5', icon: 'info', color: 'text-info', label: 'Note' },
-  [CALLOUT_TONE.MISTAKE]: { border: 'border-error/40', bg: 'bg-error/5', icon: 'error', color: 'text-error', label: 'Common mistake' },
-  [CALLOUT_TONE.INTERVIEW]: { border: 'border-primary/40', bg: 'bg-primary/5', icon: 'record_voice_over', color: 'text-primary-ink', label: 'Interview' },
+  [CALLOUT_TONE.TIP]: { border: 'border-success/40', bg: 'bg-success/5', icon: 'lightbulb', color: 'text-success' },
+  [CALLOUT_TONE.WARNING]: { border: 'border-warning/40', bg: 'bg-warning/5', icon: 'warning', color: 'text-warning' },
+  [CALLOUT_TONE.DANGER]: { border: 'border-error/40', bg: 'bg-error/5', icon: 'dangerous', color: 'text-error' },
+  [CALLOUT_TONE.INFO]: { border: 'border-info/40', bg: 'bg-info/5', icon: 'info', color: 'text-info' },
+  [CALLOUT_TONE.MISTAKE]: { border: 'border-error/40', bg: 'bg-error/5', icon: 'error', color: 'text-error' },
+  [CALLOUT_TONE.INTERVIEW]: { border: 'border-primary/40', bg: 'bg-primary/5', icon: 'record_voice_over', color: 'text-primary-ink' },
 };
 
 /** Stable slug for a heading, used by the "on this page" rail. */
@@ -50,6 +51,7 @@ function Callout({ section }) {
 }
 
 function AnnotatedCode({ section }) {
+  const t = useT();
   const [active, setActive] = useState(null);
   const highlighted = active != null ? [section.annotations[active].line] : [];
 
@@ -57,7 +59,7 @@ function AnnotatedCode({ section }) {
     <div className="overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest">
       <div className="border-b border-outline-variant bg-surface-container-low px-3 py-2">
         <span className="font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-          Annotated · hover a note to highlight its line
+          {t('learning.annotatedHint')}
         </span>
       </div>
       <div className="px-4 py-3">
@@ -121,6 +123,7 @@ function Comparison({ section }) {
 
 /** Inline "predict before you read on" checkpoint. */
 function Predict({ section }) {
+  const t = useT();
   const [choice, setChoice] = useState(null);
   const [revealed, setRevealed] = useState(false);
 
@@ -128,7 +131,7 @@ function Predict({ section }) {
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-5">
       <p className="mb-3 flex items-center gap-2 font-heading text-body-md font-semibold text-primary-ink">
         <Icon name="psychology" size={18} filled />
-        Predict the output before reading on
+        {t('learning.predictOutputHint')}
       </p>
 
       <div className="mb-4 overflow-hidden rounded border border-outline-variant bg-surface-container-lowest px-4 py-3">
@@ -170,12 +173,14 @@ function Predict({ section }) {
           disabled={choice == null}
           className="mt-4 rounded bg-primary px-4 py-2 font-body-sm font-bold text-on-primary transition hover:bg-primary-fixed disabled:opacity-50"
         >
-          Reveal answer
+          {t('learning.revealAnswer')}
         </button>
       ) : (
         <div className="mt-4 rounded border border-outline-variant bg-surface-container px-4 py-3">
           <p className={cx('mb-1 font-body-sm font-bold', choice === section.correct ? 'text-success' : 'text-warning')}>
-            {choice === section.correct ? 'Correct.' : `The answer is ${section.options[section.correct]}.`}
+            {choice === section.correct
+              ? t('learning.correct')
+              : t('learning.theAnswerIs', { answer: section.options[section.correct] })}
           </p>
           <p className="font-body-sm leading-6 text-on-surface-variant">
             <InlineMarkup text={section.explanation} />
@@ -244,11 +249,11 @@ function Table({ section }) {
 function Terms({ section }) {
   return (
     <dl className="divide-y divide-[rgb(var(--c-outline-variant))] overflow-hidden rounded-lg border border-outline-variant">
-      {section.terms.map((t, i) => (
+      {section.terms.map((entry, i) => (
         <div key={i} className="grid gap-1 px-4 py-3 sm:grid-cols-[minmax(9rem,14rem)_1fr] sm:gap-4">
-          <dt className="font-mono text-code-md font-semibold text-primary-ink">{t.term}</dt>
+          <dt className="font-mono text-code-md font-semibold text-primary-ink">{entry.term}</dt>
           <dd className="font-body-sm leading-6 text-on-surface-variant">
-            <InlineMarkup text={t.definition} />
+            <InlineMarkup text={entry.definition} />
           </dd>
         </div>
       ))}

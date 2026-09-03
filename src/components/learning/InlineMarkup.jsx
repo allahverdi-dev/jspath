@@ -20,12 +20,22 @@ import { Fragment, useMemo } from 'react';
  *
  * Everything is rendered as React elements — no `dangerouslySetInnerHTML`
  * anywhere — so authored content can never inject markup into the page.
+ *
+ * The output is marked `lang="en"`. Every caller passes authored learning
+ * content, which is canonical English inside an interface that may be running in
+ * Azerbaijani or Russian; see `Authored.jsx` for why that marking matters. The
+ * wrapper uses `display: contents` so it contributes the language and nothing
+ * else — no box, no effect on the surrounding layout, which matters because this
+ * renders inside paragraphs, list items and table cells alike.
  */
 
 // `` … `` comes before ` … ` so a span that itself contains a backtick — the
 // standard Markdown escape, used by the tagged-template content — is matched
 // whole instead of being read as two stray delimiters.
 const PATTERN = /(```[\s\S]*?```)|(``[\s\S]*?``)|(`[^`]+`)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\([^)]+\))/g;
+
+/* Carries the language without generating a box of its own. */
+const CONTENTS = { display: 'contents' };
 
 export function InlineMarkup({ text }) {
   const parts = useMemo(() => {
@@ -71,7 +81,7 @@ export function InlineMarkup({ text }) {
   }, [text]);
 
   return (
-    <>
+    <span lang="en" style={CONTENTS}>
       {parts.map((part, i) => {
         if (part.type === 'block') {
           return (
@@ -124,6 +134,6 @@ export function InlineMarkup({ text }) {
         }
         return <Fragment key={i}>{part.value}</Fragment>;
       })}
-    </>
+    </span>
   );
 }

@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Button } from '../ui/index.jsx';
 import { useAuth } from '../../state/AuthProvider.jsx';
 import { GitHubIcon, GoogleIcon } from './ProviderIcons.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 const providerLabel = { google: 'Google', github: 'GitHub' };
 
 export function OAuthButtons({ redirectPath, guestPath }) {
+  const t = useT();
   const { isConfigured, signInWithGoogle, signInWithGitHub } = useAuth();
   const [busyProvider, setBusyProvider] = useState(null);
   const [error, setError] = useState(null);
@@ -20,11 +22,11 @@ export function OAuthButtons({ redirectPath, guestPath }) {
     try {
       const result = await signIn(redirectPath);
       if (result?.error) {
-        setError(`We couldn't start ${providerLabel[provider]} sign-in. ${result.error.message}`);
+        setError(`${t('auth.oauthFailed', { provider: providerLabel[provider] })} ${result.error.message}`);
         setBusyProvider(null);
       }
     } catch (caught) {
-      setError(`We couldn't start ${providerLabel[provider]} sign-in. ${caught?.message ?? 'Please try again.'}`);
+      setError(`${t('auth.oauthFailed', { provider: providerLabel[provider] })} ${caught?.message ?? t('auth.oauthTryAgain')}`);
       setBusyProvider(null);
     }
   };
@@ -41,7 +43,7 @@ export function OAuthButtons({ redirectPath, guestPath }) {
         disabled={disabled}
       >
         {busyProvider !== 'google' && <GoogleIcon />}
-        Continue with Google
+        {t('auth.continueWithGoogle')}
       </Button>
       <Button
         type="button"
@@ -52,7 +54,7 @@ export function OAuthButtons({ redirectPath, guestPath }) {
         disabled={disabled}
       >
         {busyProvider !== 'github' && <GitHubIcon />}
-        Continue with GitHub
+        {t('auth.continueWithGitHub')}
       </Button>
 
       {error && (
@@ -67,7 +69,7 @@ export function OAuthButtons({ redirectPath, guestPath }) {
         <span className="h-px flex-1 bg-outline-variant" />
       </div>
 
-      <Button as={Link} to={guestPath} variant="ghost" className="w-full">Continue as guest</Button>
+      <Button as={Link} to={guestPath} variant="ghost" className="w-full">{t('auth.continueAsGuest')}</Button>
     </div>
   );
 }

@@ -25,13 +25,19 @@ export const DIFFICULTY_ORDER = [
   DIFFICULTY.EXPERT,
 ];
 
-export const DIFFICULTY_LABEL = {
-  [DIFFICULTY.BEGINNER]: 'Beginner',
-  [DIFFICULTY.EASY]: 'Easy',
-  [DIFFICULTY.MEDIUM]: 'Medium',
-  [DIFFICULTY.HARD]: 'Hard',
-  [DIFFICULTY.EXPERT]: 'Expert',
-};
+/**
+ * Display keys, not display text.
+ *
+ * The tokens themselves ('beginner', 'core', 'concept'...) are stable data that
+ * content, filters and stored progress depend on, and they never change. Only
+ * the wording is per-language, so these maps point at dictionary keys and the
+ * UI resolves them with `t`. The tokens are already camelCase, so the key is
+ * derived rather than spelled out twice — `src/i18n/i18n.test.js` asserts every
+ * enum member resolves in every locale.
+ */
+export const DIFFICULTY_KEY = Object.fromEntries(
+  DIFFICULTY_ORDER.map((value) => [value, `difficulty.${value}`]),
+);
 
 /** Module-level track, drives curriculum grouping and colour chips. */
 export const TRACK = Object.freeze({
@@ -44,15 +50,9 @@ export const TRACK = Object.freeze({
   INTERVIEW: 'interview',
 });
 
-export const TRACK_LABEL = {
-  [TRACK.FOUNDATIONS]: 'Foundations',
-  [TRACK.CORE]: 'Core Language',
-  [TRACK.BROWSER]: 'Browser & DOM',
-  [TRACK.ASYNC]: 'Asynchronous',
-  [TRACK.ADVANCED]: 'Advanced',
-  [TRACK.PROFESSIONAL]: 'Professional',
-  [TRACK.INTERVIEW]: 'Interview',
-};
+export const TRACK_KEY = Object.fromEntries(
+  Object.values(TRACK).map((value) => [value, `track.${value}`]),
+);
 
 /**
  * Lesson section kinds. The lesson renderer maps each kind to a component;
@@ -137,25 +137,10 @@ export const INTERVIEW_KIND = Object.freeze({
 
 export const INTERVIEW_KINDS = Object.values(INTERVIEW_KIND);
 
-/** Human labels for the interview kind filter. */
-export const INTERVIEW_KIND_LABEL = {
-  [INTERVIEW_KIND.CONCEPT]: 'Conceptual',
-  [INTERVIEW_KIND.COMPARISON]: 'Comparison',
-  [INTERVIEW_KIND.OUTPUT]: 'Output prediction',
-  [INTERVIEW_KIND.CHOICE]: 'Multiple choice',
-  [INTERVIEW_KIND.DEBUGGING]: 'Debugging',
-  [INTERVIEW_KIND.CODING]: 'Coding',
-  [INTERVIEW_KIND.REFACTORING]: 'Refactoring',
-  [INTERVIEW_KIND.BROWSER]: 'Browser / DOM',
-  [INTERVIEW_KIND.ASYNC]: 'Async / event loop',
-  [INTERVIEW_KIND.ARCHITECTURE]: 'Architecture',
-  [INTERVIEW_KIND.PERFORMANCE]: 'Performance',
-  [INTERVIEW_KIND.SECURITY]: 'Security',
-  [INTERVIEW_KIND.ALGORITHMS]: 'Algorithms',
-  [INTERVIEW_KIND.HTTP]: 'HTTP / APIs',
-  [INTERVIEW_KIND.TESTING]: 'Testing',
-  [INTERVIEW_KIND.SCENARIO]: 'Scenario',
-};
+/** Dictionary keys for the interview kind filter. */
+export const INTERVIEW_KIND_KEY = Object.fromEntries(
+  Object.values(INTERVIEW_KIND).map((value) => [value, `interviewKind.${value}`]),
+);
 
 /**
  * Interview levels. These are deliberately **not** `DIFFICULTY` — an interview
@@ -170,6 +155,13 @@ export const INTERVIEW_LEVEL = Object.freeze({
 });
 
 export const INTERVIEW_LEVELS = Object.values(INTERVIEW_LEVEL);
+
+export const INTERVIEW_LEVEL_KEY = {
+  [INTERVIEW_LEVEL.JUNIOR]: 'interviewLevel.junior',
+  [INTERVIEW_LEVEL.JUNIOR_PLUS]: 'interviewLevel.juniorPlus',
+  [INTERVIEW_LEVEL.INTERMEDIATE]: 'interviewLevel.intermediate',
+  [INTERVIEW_LEVEL.ADVANCED]: 'interviewLevel.advanced',
+};
 
 /** Mastery states. Order matters — index is used for comparisons. */
 export const MASTERY = Object.freeze({
@@ -186,12 +178,9 @@ export const MASTERY_ORDER = [
   MASTERY.MASTERED,
 ];
 
-export const MASTERY_LABEL = {
-  [MASTERY.NOT_STARTED]: 'Not Started',
-  [MASTERY.LEARNING]: 'Learning',
-  [MASTERY.PRACTICING]: 'Practicing',
-  [MASTERY.MASTERED]: 'Mastered',
-};
+export const MASTERY_KEY = Object.fromEntries(
+  Object.values(MASTERY).map((value) => [value, `mastery.${value}`]),
+);
 
 /**
  * Reference categories.
@@ -295,13 +284,13 @@ export const PLACEMENT_DOMAIN = Object.freeze({
 });
 export const PLACEMENT_DOMAINS = Object.values(PLACEMENT_DOMAIN);
 
-export const PLACEMENT_DOMAIN_LABEL = {
-  [PLACEMENT_DOMAIN.FOUNDATIONS]: 'Foundations',
-  [PLACEMENT_DOMAIN.CORE_LANGUAGE]: 'Core language',
-  [PLACEMENT_DOMAIN.BROWSER_DOM]: 'Browser & DOM',
-  [PLACEMENT_DOMAIN.ASYNC]: 'Async',
-  [PLACEMENT_DOMAIN.ADVANCED_LANGUAGE]: 'Advanced language',
-  [PLACEMENT_DOMAIN.ENGINEERING]: 'Engineering',
+export const PLACEMENT_DOMAIN_KEY = {
+  [PLACEMENT_DOMAIN.FOUNDATIONS]: 'placement.domainFoundations',
+  [PLACEMENT_DOMAIN.CORE_LANGUAGE]: 'placement.domainCore',
+  [PLACEMENT_DOMAIN.BROWSER_DOM]: 'placement.domainBrowser',
+  [PLACEMENT_DOMAIN.ASYNC]: 'placement.domainAsync',
+  [PLACEMENT_DOMAIN.ADVANCED_LANGUAGE]: 'placement.domainAdvanced',
+  [PLACEMENT_DOMAIN.ENGINEERING]: 'placement.domainEngineering',
 };
 
 /** Which topics each domain is responsible for. Every id must exist in topics.js. */
@@ -329,11 +318,11 @@ export const PLACEMENT_LEVEL = Object.freeze({
 });
 export const PLACEMENT_LEVELS = Object.values(PLACEMENT_LEVEL);
 
-export const PLACEMENT_LEVEL_LABEL = {
-  [PLACEMENT_LEVEL.ZERO]: 'Starting out',
-  [PLACEMENT_LEVEL.BASICS]: 'Knows the basics',
-  [PLACEMENT_LEVEL.INTERMEDIATE]: 'Comfortable with JavaScript',
-  [PLACEMENT_LEVEL.EXPERIENCED]: 'Experienced developer',
+export const PLACEMENT_LEVEL_KEY = {
+  [PLACEMENT_LEVEL.ZERO]: 'placement.levelZero',
+  [PLACEMENT_LEVEL.BASICS]: 'placement.levelBasics',
+  [PLACEMENT_LEVEL.INTERMEDIATE]: 'placement.levelIntermediate',
+  [PLACEMENT_LEVEL.EXPERIENCED]: 'placement.levelExperienced',
 };
 
 /**

@@ -1,10 +1,13 @@
 import { Skeleton } from '../ui/index.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 /** Route-level loading state. Skeletons mirror the layout that is arriving. */
 export function PageSkeleton() {
+  const t = useT();
+
   return (
     <div className="animate-fade-in" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('common.loading')}</span>
       <Skeleton className="h-10 w-64" />
       <Skeleton className="mt-3 h-5 w-96 max-w-full" />
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

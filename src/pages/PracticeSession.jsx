@@ -8,6 +8,7 @@ import { useUserState } from '../state/UserStateProvider.jsx';
 import { weakTopics } from '../features/mastery/masteryEngine.js';
 import { reviewQueue } from '../features/progress/recommendations.js';
 import { Logo } from '../layouts/AppShell.jsx';
+import { useT } from '../i18n/index.jsx';
 
 const SIZE = { daily: 5, weak: 8, mistakes: 10, random: 10 };
 
@@ -15,6 +16,7 @@ export default function PracticeSession() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { state } = useUserState();
+  const t = useT();
   const mode = params.get('mode') ?? 'random';
 
   const [exercises, setExercises] = useState(null);
@@ -27,8 +29,8 @@ export default function PracticeSession() {
   const selected = useMemo(() => {
     let pool = allExercises;
     if (mode === 'weak') {
-      const weak = weakTopics(state, contentIndex.topics, contentIndex, { limit: 4 }).map((t) => t.topicId);
-      pool = allExercises.filter((e) => e.topicIds.some((t) => weak.includes(t)));
+      const weak = weakTopics(state, contentIndex.topics, contentIndex, { limit: 4 }).map((topic) => topic.topicId);
+      pool = allExercises.filter((e) => e.topicIds.some((id) => weak.includes(id)));
     } else if (mode === 'mistakes') {
       const ids = new Set(reviewQueue(state, contentIndex).map((r) => r.refId));
       pool = allExercises.filter((e) => ids.has(e.id));
@@ -49,12 +51,23 @@ export default function PracticeSession() {
     return () => { cancelled = true; };
   }, [selected]);
 
-  const titles = { daily: 'Daily practice', weak: 'Weak-topic practice', mistakes: 'Review your mistakes', random: 'Random practice' };
+  /* Mode tokens come from the URL and stay stable; only the heading is translated. */
+  const titleKeys = {
+    daily: 'practice.dailyPractice',
+    weak: 'practice.weakTopics',
+    mistakes: 'practice.reviewMistakes',
+    random: 'practice.randomPractice',
+  };
 
   if (exercises && exercises.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20">
-        <EmptyState icon="hourglass_empty" title="Nothing to practise yet" message="There are no exercises available for this session type." action={<Button to="/practice">Back to Practice Hub</Button>} />
+        <EmptyState
+          icon="hourglass_empty"
+          title={t('practice.nothingToPractise')}
+          message={t('practice.nothingToPractiseBody')}
+          action={<Button to="/practice">{t('practice.backToHub')}</Button>}
+        />
       </div>
     );
   }
@@ -66,31 +79,31 @@ export default function PracticeSession() {
       <header className="safe-top sticky top-0 z-30 border-b border-outline-variant bg-surface/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-3 px-4">
           <button type="button" onClick={() => navigate('/practice')} className="flex items-center gap-1.5 font-body-sm text-on-surface-variant transition hover:text-on-surface">
-            <Icon name="close" size={18} /> Exit
+            <Icon name="close" size={18} /> {t('practice.exit')}
           </button>
           <Logo size="sm" className="mx-auto hidden sm:flex" />
           {exercises && !finished && (
             <span className="ml-auto font-mono text-code-sm text-on-surface-variant">{index + 1} / {exercises.length}</span>
           )}
         </div>
-        {exercises && <ProgressBar value={exercises.length ? index / exercises.length : 0} height={2} label="Session progress" />}
+        {exercises && <ProgressBar value={exercises.length ? index / exercises.length : 0} height={2} label={t('practice.sessionProgress')} />}
       </header>
 
       <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-8">
-        <h1 className="mb-6 font-display text-headline-md text-on-surface">{titles[mode]}</h1>
+        <h1 className="mb-6 font-display text-headline-md text-on-surface">{t(titleKeys[mode] ?? titleKeys.random)}</h1>
 
         {!exercises ? (
           <ContentSkeleton lines={8} />
         ) : finished ? (
           <Card className="p-6 text-center">
             <Icon name="check_circle" size={40} className="mx-auto text-success" filled />
-            <h2 className="mt-4 font-heading text-headline-sm text-on-surface">Session complete</h2>
+            <h2 className="mt-4 font-heading text-headline-sm text-on-surface">{t('practice.sessionComplete')}</h2>
             <p className="mt-2 font-body-md text-on-surface-variant">
-              You solved {solvedIds.size} of {exercises.length} exercises in this set.
+              {t('practice.solvedSummary', { solved: solvedIds.size, total: exercises.length })}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Button as={Link} to="/practice" icon="fitness_center">Back to Practice Hub</Button>
-              <Button variant="secondary" onClick={() => { setIndex(0); setSolvedIds(new Set()); }} icon="refresh">Run it again</Button>
+              <Button as={Link} to="/practice" icon="fitness_center">{t('practice.backToHub')}</Button>
+              <Button variant="secondary" onClick={() => { setIndex(0); setSolvedIds(new Set()); }} icon="refresh">{t('practice.runItAgain')}</Button>
             </div>
           </Card>
         ) : (
@@ -98,7 +111,7 @@ export default function PracticeSession() {
             <ExerciseRunner key={exercises[index].id} exercise={exercises[index]} onSolved={(ex) => setSolvedIds((prev) => (prev.has(ex.id) ? prev : new Set(prev).add(ex.id)))} />
             <div className="mt-4 flex justify-end">
               <Button onClick={() => setIndex((i) => i + 1)} iconRight="arrow_forward">
-                {index < exercises.length - 1 ? 'Next exercise' : 'Finish session'}
+                {index < exercises.length - 1 ? t('practice.nextExercise') : t('practice.finishSession')}
               </Button>
             </div>
           </>

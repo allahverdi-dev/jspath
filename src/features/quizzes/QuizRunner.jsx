@@ -5,6 +5,7 @@ import { useUserState } from '../../state/UserStateProvider.jsx';
 import { QUIZ_KIND } from '../../content/schema/types.js';
 import { QUIZ_PASS_THRESHOLD } from '../progress/progressEngine.js';
 import { InlineMarkup } from '../../components/learning/InlineMarkup.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 /**
  * The quiz engine.
@@ -14,8 +15,10 @@ import { InlineMarkup } from '../../components/learning/InlineMarkup.jsx';
  * Where the content supplies per-option rationales, the learner sees why the
  * option they chose was wrong — not merely that it was.
  */
-export function QuizRunner({ quiz, onComplete, title = 'Check your understanding' }) {
+export function QuizRunner({ quiz, onComplete, title }) {
   const { actions } = useUserState();
+  const t = useT();
+  const heading = title ?? t('learning.checkUnderstanding');
   const questions = useMemo(() => quiz.questions ?? [], [quiz.questions]);
 
   const [index, setIndex] = useState(0);
@@ -127,32 +130,31 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
           </div>
           <div className="min-w-0">
             <h3 className="font-heading text-title-md text-on-surface">
-              {score} out of {questions.length} correct
+              {t('learning.quizScoreSummary', { score, total: questions.length })}
             </h3>
             <p className="mt-0.5 font-body-sm text-on-surface-variant">
-              {passed
-                ? 'Solid understanding — you can move on with confidence.'
-                : 'Worth another pass. Reviewing the explanations below is the fastest way to close the gap.'}
+              {passed ? t('learning.quizPassed') : t('learning.quizRetryAdvice')}
             </p>
           </div>
         </div>
 
-        <ProgressBar value={ratio} className="mt-5" tone={passed ? 'success' : 'primary'} label="Quiz score" />
+        <ProgressBar value={ratio} className="mt-5" tone={passed ? 'success' : 'primary'} label={t('learning.quizScore')} />
 
         {missed.length > 0 && (
           <div className="mt-6">
             <p className="mb-3 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
-              Review these
+              {t('learning.reviewThese')}
             </p>
             <div className="space-y-3">
               {missed.map((q) => (
                 <div key={q.id} className="rounded border border-outline-variant bg-surface-container px-4 py-3">
                   <p className="font-body-sm font-medium text-on-surface"><InlineMarkup text={q.prompt} /></p>
                   <p className="mt-1.5 font-body-sm text-success">
-                    Correct answer:{' '}
-                    {q.kind === QUIZ_KIND.MULTIPLE
-                      ? q.correct.map((i) => q.options[i]).join(', ')
-                      : q.options[q.correct]}
+                    {t('learning.correctAnswerIs', {
+                      answer: q.kind === QUIZ_KIND.MULTIPLE
+                        ? q.correct.map((i) => q.options[i]).join(', ')
+                        : q.options[q.correct],
+                    })}
                   </p>
                   <p className="mt-1.5 font-body-sm leading-6 text-on-surface-variant">{q.explanation}</p>
                 </div>
@@ -162,7 +164,7 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
         )}
 
         <Button variant="secondary" className="mt-6" onClick={restart} icon="refresh">
-          Retake quiz
+          {t('learning.retakeQuiz')}
         </Button>
       </div>
     );
@@ -172,17 +174,17 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
   return (
     <div className="rounded-lg border border-outline-variant bg-surface-container-low p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between gap-4">
-        <h3 className="font-heading text-title-md text-on-surface">{title}</h3>
+        <h3 className="font-heading text-title-md text-on-surface">{heading}</h3>
         <span className="shrink-0 font-mono text-label-caps uppercase tracking-wider text-on-surface-variant">
           {index + 1} / {questions.length}
         </span>
       </div>
 
-      <ProgressBar value={(index + (isRevealed ? 1 : 0)) / questions.length} className="mb-6" label="Quiz progress" />
+      <ProgressBar value={(index + (isRevealed ? 1 : 0)) / questions.length} className="mb-6" label={t('learning.quizProgress')} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {isMulti && <Badge tone="info">Select all that apply</Badge>}
-        {question.kind === QUIZ_KIND.OUTPUT && <Badge tone="warning">Predict the output</Badge>}
+        {isMulti && <Badge tone="info">{t('learning.selectAllThatApply')}</Badge>}
+        {question.kind === QUIZ_KIND.OUTPUT && <Badge tone="warning">{t('learning.predictTheOutput')}</Badge>}
       </div>
 
       <p className="mb-4 font-body-lg leading-7 text-on-surface"><InlineMarkup text={question.prompt} /></p>
@@ -249,7 +251,7 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
         >
           <p className={cx('mb-1 flex items-center gap-2 font-body-sm font-bold', isCorrect ? 'text-success' : 'text-info')}>
             <Icon name={isCorrect ? 'check_circle' : 'school'} size={16} filled />
-            {isCorrect ? 'Correct' : 'Here’s why'}
+            {isCorrect ? t('learning.correctShort') : t('learning.heresWhy')}
           </p>
           <p className="font-body-sm leading-6 text-on-surface-variant">{question.explanation}</p>
         </div>
@@ -262,16 +264,16 @@ export function QuizRunner({ quiz, onComplete, title = 'Check your understanding
             disabled={answer == null || (isMulti && answer.length === 0)}
             icon="check"
           >
-            Check answer
+            {t('learning.checkAnswer')}
           </Button>
         ) : (
           <Button onClick={next} iconRight={index < questions.length - 1 ? 'arrow_forward' : 'flag'}>
-            {index < questions.length - 1 ? 'Next question' : 'Finish quiz'}
+            {index < questions.length - 1 ? t('learning.nextQuestion') : t('learning.finishQuiz')}
           </Button>
         )}
         {index > 0 && !isRevealed && (
           <Button variant="ghost" onClick={() => setIndex((i) => i - 1)} icon="arrow_back">
-            Back
+            {t('common.back')}
           </Button>
         )}
       </div>

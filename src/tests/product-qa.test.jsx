@@ -225,7 +225,10 @@ describe('import handles hostile and malformed data safely', () => {
     // Settings does JSON.parse inside try/catch and reports a toast on failure,
     // so malformed text never becomes state in the first place.
     expect(settingsSource).toMatch(/try\s*\{[\s\S]*JSON\.parse[\s\S]*catch/);
-    expect(settingsSource).toMatch(/Could not import/);
+    // The failure is reported to the learner. The message is now a translation
+    // key rather than a literal, so assert the key — and that it resolves in
+    // every locale, which the i18n dictionary test enforces separately.
+    expect(settingsSource).toMatch(/settings\.importFailed/);
   });
 
   it('normalises a partial remote record when merging on sign-in', () => {

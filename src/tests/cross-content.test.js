@@ -409,7 +409,8 @@ describe('card text keeps its markup intact', () => {
     const source = practiceHubSource;
     expect(source).toContain('<InlineMarkup text={exercise.title} />');
     expect(exerciseRunnerSource).toContain('<InlineMarkup text={exercise.instructions} />');
-    expect(exerciseRunnerSource).toContain('font-mono text-code-md text-on-surface">{option}</span>');
+    expect(exerciseRunnerSource).toContain('font-mono text-code-md text-on-surface"><Authored>{option}</Authored></span>');
+    expect(exerciseRunnerSource).not.toContain('<InlineMarkup text={option} />');
     expect(quizRunnerSource).toContain('<InlineMarkup text={option} />');
   });
 

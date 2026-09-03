@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Logo } from './AppShell.jsx';
 import { Card } from '../components/ui/index.jsx';
+import { useT } from '../i18n/index.jsx';
 
 export function AuthLayout({ title, subtitle, children, footer }) {
+  const t = useT();
+
   return (
     <div className="safe-page safe-top safe-bottom flex min-h-screen flex-col bg-background">
-      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <a href="#main-content" className="skip-link">{t('nav.skipToContent')}</a>
       <header className="px-4 py-6 lg:px-8">
         <Link to="/"><Logo /></Link>
       </header>
