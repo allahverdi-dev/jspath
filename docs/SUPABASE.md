@@ -71,6 +71,26 @@ artifact is only reachable through the function, and the function is the gate.
 
 See [`DEPLOYMENT.md`](DEPLOYMENT.md) for the deploy ordering this implies.
 
+## 2c. Account deletion
+
+`Settings → Danger zone → Delete account` calls the `delete-account` Edge
+Function. It verifies the session, takes the user id from the token, checks the
+subscription state server-side, and refuses while a subscription can still
+charge the learner. See `docs/LEGAL.md` for the rules and the trust boundary.
+
+No table and no migration is needed for it. Deleting the row from `auth.users`
+cascades to `public.user_progress` and `public.subscriptions`, both of which
+already declare `on delete cascade`. `public.billing_events` is intentionally
+untouched: it holds no user reference and exists for webhook idempotency.
+
+It uses the same secrets the other functions already have —
+`SUPABASE_SERVICE_ROLE_KEY` plus the platform-provided `SUPABASE_URL` and
+`SUPABASE_ANON_KEY`. **No new environment variable is required.**
+
+```bash
+supabase functions deploy delete-account
+```
+
 ## 3. OAuth providers
 
 Enable Google and GitHub under **Authentication → Providers**. Create each provider's

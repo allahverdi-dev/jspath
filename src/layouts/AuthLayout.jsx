@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Logo } from './AppShell.jsx';
 import { Card } from '../components/ui/index.jsx';
 import { useT } from '../i18n/index.jsx';
+import { LegalLinks } from '../components/layout/LegalLinks.jsx';
 
 export function AuthLayout({ title, subtitle, children, footer }) {
   const t = useT();
@@ -18,6 +19,7 @@ export function AuthLayout({ title, subtitle, children, footer }) {
           {subtitle && <p className="mt-2 font-body-md text-on-surface-variant">{subtitle}</p>}
           <Card className="mt-6 p-4 sm:p-6">{children}</Card>
           {footer && <div className="mt-5 text-center font-body-sm text-on-surface-variant">{footer}</div>}
+          <LegalLinks className="mt-8" />
         </div>
       </main>
     </div>

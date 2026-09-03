@@ -18,6 +18,8 @@ Status of each content pillar. Counts come from
 | Localization / i18n | **COMPLETE** | all product chrome in en / az / ru, 912 strings |
 | Content-language boundary | **COMPLETE** | authored English marked `lang="en"` inside a translated UI |
 | Production defect remediation | **COMPLETE** | text fragmentation and auth-aware landing |
+| Legal / trust layer | **COMPLETE** | all five owner decisions published |
+| Account deletion | **COMPLETE** | Settings danger zone, server-side, subscription-safe |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -659,7 +661,7 @@ All gates green as of the last run:
 | `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 635 passed (28 files) |
+| `npm test` | 780 passed (30 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -816,6 +818,76 @@ passes it to both providers and to the guest link. The gate that sends people to
 sign in now carries the current path. Opening `/login` directly still defaults to
 the dashboard, and an authenticated visitor to `/login` or `/signup` is redirected
 away rather than shown OAuth buttons.
+
+## Legal / trust layer
+
+Terms of Service, Privacy Policy and Refund Policy at `/terms`, `/privacy` and
+`/refund-policy`, a shared `SiteFooter`, and full en/az/ru translations.
+See `docs/LEGAL.md` for how the files fit together and how to update the text.
+
+The policies are written from an audit of what the product actually does, not
+from a template. They name Gumroad as the seller of record because that is what
+the code integrates, say that sign-in is Google and GitHub only because that set
+is closed in `services/supabase.js`, and state that there are no cookies and no
+analytics because there are none in the source. `legal.test.js` re-checks each of
+those claims against the implementation, so the copy fails the suite rather than
+quietly going stale when the product moves.
+
+### The five open facts, now decided
+
+The audit found five legally significant facts that no file, config or document
+established. Rather than invent them, `src/legal/config.js` held them as `null`
+and every section depending on one was dropped from the page. The product owner
+has now decided all five:
+
+| Decision | Value |
+| --- | --- |
+| Contact | `jspath.edu@gmail.com` |
+| Refund window | 10 calendar days, initial eligible purchase only; renewals generally non-refundable, exceptional requests reviewed individually with no promised outcome |
+| Governing law and venue | Laws and competent courts of the Republic of Azerbaijan |
+| Account deletion | Built as a real feature, not a support address |
+| Minimum age | 16, as a condition of use; JSPath does not verify age |
+
+Facts live only in `config.js`. Locale files carry `{token}` placeholders that
+the renderer substitutes, so a number or an address exists in one place and
+cannot drift between languages - and the suite fails if a locale file hard-codes
+one.
+
+`LEGAL_PUBLISHABLE` is still **computed** rather than asserted. Emptying any one
+decision puts the layer back into withholding, and a test proves it. That was
+the point of the mechanism, so it stays.
+
+### Account deletion
+
+Settings has a Danger zone. Deleting runs `supabase/functions/delete-account`,
+which verifies the session, takes the user id from the token rather than the
+request, checks subscription state with the service role and fails closed.
+
+The rule that matters: an `active` or `past_due` subscription **blocks**
+deletion, because JSPath cannot cancel a Gumroad subscription and deleting first
+would leave a recurring charge with no account behind it. A `canceling`
+subscription with time left is allowed only after an explicit forfeiture warning
+that the request must acknowledge. Anything unrecognised is refused.
+
+No migration was needed: `user_progress` and `subscriptions` already declare
+`on delete cascade` from `auth.users`. `billing_events` is kept deliberately - it
+has no user reference at all and exists so a replayed webhook is not processed
+twice.
+
+Client teardown is deliberately in the unobvious order: nothing local is cleared
+until the server confirms the account is gone, because a failed deletion that
+had already wiped the browser would leave a live account behind a signed-out,
+empty-looking app.
+
+### Verified
+
+| Check | Result |
+| --- | --- |
+| Responsive | 320 / 390 / 768 / 1280 / 1920 x en/az/ru x 3 pages - 0 overflow, 0 broken words, 0 collisions with the mobile tab bar |
+| Structure | one `h1` per page, `h2` for every section, no skipped level, keyboard-reachable TOC whose anchors all resolve |
+| Language | `<html lang>` follows the locale; no localized policy prose is marked `lang="en"`; dates format through the locale formatter, including the custom Azerbaijani one |
+| Footer | mounted once by `AppShell` and once by `Landing`, absent from `FocusLayout`, client-side routing throughout |
+| Reach | policy links present on landing, dashboard, pricing, settings, login and signup |
 
 ## Next phase
 

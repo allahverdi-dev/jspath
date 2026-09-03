@@ -99,7 +99,15 @@ npm run content:premium
 supabase functions deploy premium-content
 supabase functions deploy gumroad-webhook
 supabase functions deploy reconcile-gumroad
+supabase functions deploy delete-account
 ```
+
+`delete-account` backs Settings → Danger zone. It needs **no new secret** — it
+uses `SUPABASE_SERVICE_ROLE_KEY` plus the platform-provided `SUPABASE_URL` and
+`SUPABASE_ANON_KEY`, all of which the other functions already have — and **no
+migration**: deleting the row from `auth.users` cascades to `user_progress` and
+`subscriptions`, which already declare it. Deploy it *before* the frontend, so
+the Danger zone never reaches a function that is not there yet.
 
 `premium-content` ships `payload.json` alongside it. That file must never be
 copied into `public/` or anywhere Vite can see.
@@ -182,8 +190,9 @@ These live in dashboards and must be checked by hand:
 - Supabase Site URL and Redirect URLs contain the production domain.
 - RLS is actually enabled on the three tables (the query above).
 - Edge Function secrets are set in the deployed project.
-- The three functions are deployed, and `premium-content` was deployed *after* the
+- The four functions are deployed, and `premium-content` was deployed *after* the
   most recent `content:premium` run.
+- `delete-account` is deployed *before* the frontend that calls it.
 - Google and GitHub OAuth callback URLs point at the Supabase callback.
 - Gumroad resource subscriptions point at the deployed webhook with the right token.
 - `GUMROAD_ALLOWED_PRODUCTS_JSON` lists exactly the tiers being sold.

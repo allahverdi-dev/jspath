@@ -103,6 +103,63 @@ export async function signOut() {
   }
 }
 
+/** Outcomes of a deletion request the UI has to tell apart. */
+export const DELETE_ACCOUNT_RESULT = Object.freeze({
+  OK: 'ok',
+  UNAUTHENTICATED: 'unauthenticated',
+  ACTIVE_SUBSCRIPTION: 'active_subscription',
+  UNKNOWN_SUBSCRIPTION_STATE: 'unknown_subscription_state',
+  FORFEIT_NOT_ACKNOWLEDGED: 'forfeit_not_acknowledged',
+  FAILED: 'failed',
+  UNAVAILABLE: 'unavailable',
+});
+
+/**
+ * Ask the server to delete the signed-in account.
+ *
+ * There is deliberately no user id to pass: the Edge Function reads it from the
+ * verified token, so this cannot be aimed at anyone else. The browser also does
+ * not get to decide whether deletion is safe — it sends the acknowledgement it
+ * collected and the server re-checks the subscription state itself.
+ *
+ * Every failure is returned as a distinct result rather than thrown, because the
+ * caller must not clear any local state until this says `OK`.
+ */
+export async function deleteAccount({ acknowledgeForfeit = false } = {}) {
+  const supabase = getSupabase();
+  if (!supabase) return { result: DELETE_ACCOUNT_RESULT.UNAVAILABLE };
+
+  try {
+    const { data, error } = await supabase.functions.invoke('delete-account', {
+      body: { acknowledgeForfeit },
+    });
+
+    if (error) {
+      const status = error.context?.status ?? error.status;
+      if (status === 401) return { result: DELETE_ACCOUNT_RESULT.UNAUTHENTICATED };
+      if (status === 409) {
+        // The server names which of the blocking conditions it hit.
+        const reason = error.context?.body?.reason ?? error.reason;
+        if (reason === DELETE_ACCOUNT_RESULT.ACTIVE_SUBSCRIPTION) {
+          return { result: DELETE_ACCOUNT_RESULT.ACTIVE_SUBSCRIPTION };
+        }
+        if (reason === DELETE_ACCOUNT_RESULT.FORFEIT_NOT_ACKNOWLEDGED) {
+          return { result: DELETE_ACCOUNT_RESULT.FORFEIT_NOT_ACKNOWLEDGED };
+        }
+        return { result: DELETE_ACCOUNT_RESULT.UNKNOWN_SUBSCRIPTION_STATE };
+      }
+      return { result: DELETE_ACCOUNT_RESULT.FAILED };
+    }
+
+    // Anything short of an explicit success is treated as a failure, so a
+    // changed response shape can never be read as "the account is gone".
+    if (data?.ok !== true || data?.deleted !== true) return { result: DELETE_ACCOUNT_RESULT.FAILED };
+    return { result: DELETE_ACCOUNT_RESULT.OK, residual: data.residual ?? null };
+  } catch {
+    return { result: DELETE_ACCOUNT_RESULT.UNAVAILABLE };
+  }
+}
+
 export async function getSession() {
   const supabase = getSupabase();
   if (!supabase) return null;

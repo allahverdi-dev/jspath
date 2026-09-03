@@ -5,6 +5,7 @@ import { contentStats } from '../content/registry.js';
 import { HighlightedCode } from '../components/code/CodeBlock.jsx';
 import { useT } from '../i18n/index.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
+import { SiteFooter } from '../components/layout/SiteFooter.jsx';
 
 /* Feature ids are stable; the copy comes from the dictionaries. */
 const FEATURES = [
@@ -165,19 +166,7 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-outline-variant">
-        <div className="mx-auto flex w-full max-w-container-max flex-wrap items-center gap-4 px-4 py-8 lg:px-8">
-          <Logo size="sm" />
-          <p className="font-body-sm text-on-surface-variant">{t('landing.footerTagline')}</p>
-          <nav className="ml-auto flex flex-wrap gap-4 font-body-sm text-on-surface-variant">
-            <Link to="/curriculum" className="hover:text-on-surface">{t('learning.curriculum')}</Link>
-            <Link to="/cheat-sheets" className="hover:text-on-surface">{t('cheatSheets.short')}</Link>
-            <Link to="/interview" className="hover:text-on-surface">{t('interview.interviewPrep')}</Link>
-            <Link to="/reference" className="hover:text-on-surface">{t('reference.short')}</Link>
-            <Link to="/pricing" className="hover:text-on-surface">{t('nav.pricing')}</Link>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

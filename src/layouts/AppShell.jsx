@@ -5,6 +5,7 @@ import { useUserState } from '../state/UserStateProvider.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { SearchOverlay } from '../features/search/SearchOverlay.jsx';
+import { SiteFooter } from '../components/layout/SiteFooter.jsx';
 import { useModalFocus } from '../hooks/useModalFocus.js';
 import { useI18n, useT } from '../i18n/index.jsx';
 
@@ -286,6 +287,8 @@ export function AppShell() {
             <Outlet />
           </div>
         </main>
+
+        <SiteFooter className="mt-8" />
       </div>
 
       {/* Mobile tab bar */}

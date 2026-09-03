@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Card, Icon, SectionLabel } from '../components/ui/index.jsx';
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
@@ -185,7 +185,12 @@ export default function Pricing() {
               ))}
             </div>
           )}
-          <p className="mt-3 text-center font-body-sm text-on-surface-variant">{t('billing.gumroadNotice')}</p>
+          <p className="mt-3 text-center font-body-sm text-on-surface-variant">
+            {t('billing.gumroadNotice')}{' '}
+            <Link to="/refund-policy" className="text-primary-ink underline underline-offset-2">
+              {t('legal.refund')}
+            </Link>
+          </p>
         </Card>
       </div>
     </div>

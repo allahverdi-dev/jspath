@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, Button, Icon, Toggle, Select, SectionLabel, Dialog, cx } from '../components/ui/index.jsx';
 import { useUserState } from '../state/UserStateProvider.jsx';
 import { useTheme, THEMES } from '../state/ThemeProvider.jsx';
@@ -8,6 +9,7 @@ import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { GUMROAD_MANAGE_URL } from '../features/billing/plans.js';
 import { useI18n } from '../i18n/index.jsx';
+import { DeleteAccountSection } from '../components/settings/DeleteAccountSection.jsx';
 
 /* Stable subscription tokens mapped to their wording. The tokens themselves are
    what entitlement compares, and are never translated. */
@@ -179,6 +181,12 @@ export default function Settings() {
               <Button to="/pricing" size="sm" icon="upgrade">{t('billing.viewPro')}</Button>
             )}
           </div>
+          {/* Cancelling is done here; what it does and does not mean is there. */}
+          <p className="mt-3 font-body-sm text-on-surface-variant">
+            <Link to="/refund-policy" className="text-primary-ink underline underline-offset-2">
+              {t('legal.refund')}
+            </Link>
+          </p>
         </Card>
 
         <Card className="p-5">
@@ -204,6 +212,9 @@ export default function Settings() {
             <Button variant="danger" size="sm" onClick={() => setConfirmReset(true)} icon="delete_forever">{t('settings.resetEverything')}</Button>
           </div>
         </Card>
+
+        {/* Signed-in only: a guest has no account to delete. */}
+        <DeleteAccountSection />
       </div>
 
       <Dialog

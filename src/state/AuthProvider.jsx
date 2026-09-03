@@ -80,6 +80,31 @@ export function AuthProvider({ children }) {
     return result;
   }, []);
 
+  /**
+   * Delete the account, then tear down everything that belonged to it.
+   *
+   * Order matters and is the opposite of the obvious one: nothing local is
+   * cleared until the server confirms the account is gone. A failed deletion
+   * that had already wiped the browser would leave a live account behind a
+   * signed-out, empty-looking app — the worst of both outcomes.
+   *
+   * `onDeleted` is where the caller drops the local learning document. It runs
+   * after the session is discarded, so resetting local state cannot trigger a
+   * doomed sync write against an account that no longer exists.
+   */
+  const deleteAccount = useCallback(async ({ acknowledgeForfeit = false } = {}, onDeleted) => {
+    const outcome = await supa.deleteAccount({ acknowledgeForfeit });
+    if (outcome.result !== supa.DELETE_ACCOUNT_RESULT.OK) return outcome;
+
+    // The paid payload dies first: it is the only thing here that another
+    // person could still read off this machine.
+    clearPremiumCache();
+    await supa.signOut();
+    setSession(null);
+    onDeleted?.();
+    return outcome;
+  }, []);
+
   const user = session?.user ?? null;
 
   const value = useMemo(
@@ -94,8 +119,9 @@ export function AuthProvider({ children }) {
       signInWithGoogle,
       signInWithGitHub,
       signOut,
+      deleteAccount,
     }),
-    [configured, loading, session, user, signInWithGoogle, signInWithGitHub, signOut],
+    [configured, loading, session, user, signInWithGoogle, signInWithGitHub, signOut, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

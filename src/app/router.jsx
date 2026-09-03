@@ -7,6 +7,7 @@ import { ErrorBoundary } from '../components/feedback/ErrorBoundary.jsx';
 import { ContentGate, FeatureGate } from '../components/billing/FeatureGate.jsx';
 import { FEATURE } from '../features/billing/plans.js';
 import { challengeBySlug, projectBySlug, interviewById, cheatSheetBySlug, exerciseById, lessonBySlug, moduleBySlug, referenceBySlug } from '../content/registry.js';
+import { DOCUMENTS } from '../legal/documents.js';
 
 /* Every page is code-split. The shell paints immediately; the route streams in. */
 const Landing = lazy(() => import('../pages/Landing.jsx'));
@@ -42,6 +43,7 @@ const OnboardingLevel = lazy(() => import('../pages/OnboardingLevel.jsx'));
 const OnboardingGoals = lazy(() => import('../pages/OnboardingGoals.jsx'));
 const Placement = lazy(() => import('../pages/Placement.jsx'));
 const NotFound = lazy(() => import('../pages/NotFound.jsx'));
+const LegalDocument = lazy(() => import('../pages/LegalDocument.jsx'));
 
 /**
  * Each route is wrapped in its own error boundary, so a single lesson that fails
@@ -112,6 +114,15 @@ export function AppRouter() {
         <Route path="/bookmarks" element={<Page element={<Bookmarks />} />} />
         <Route path="/search" element={<Page element={<SearchPage />} />} />
         <Route path="/settings" element={<Page element={<Settings />} />} />
+
+        {/*
+         * Public policy pages. The paths are locale-independent, like every
+         * other route: the document language follows the interface locale.
+         * An unrecognised path under them still falls through to the 404 below.
+         */}
+        {DOCUMENTS.map((doc) => (
+          <Route key={doc.id} path={doc.path} element={<Page element={<LegalDocument documentId={doc.id} />} />} />
+        ))}
       </Route>
 
       <Route path="*" element={<Page element={<NotFound />} />} />
