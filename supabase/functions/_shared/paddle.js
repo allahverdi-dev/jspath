@@ -27,6 +27,74 @@ const API_HOSTS = Object.freeze({
   production: 'https://api.paddle.com',
 });
 
+const ENV_PREFIX = Object.freeze({
+  sandbox: 'PADDLE_SANDBOX',
+  production: 'PADDLE_LIVE',
+});
+
+function paddleConfigName(environment, suffix) {
+  const resolved = paddleEnvironment(environment);
+  return `${ENV_PREFIX[resolved]}_${suffix}`;
+}
+
+function legacyEnvironmentMatches(environment, env = denoEnv()) {
+  try {
+    return paddleEnvironment(env?.get('PADDLE_ENVIRONMENT'))
+      === paddleEnvironment(environment);
+  } catch {
+    return false;
+  }
+}
+
+function paddleConfigValue(
+  environment,
+  suffix,
+  legacyName,
+  env = denoEnv(),
+) {
+  const resolved = paddleEnvironment(environment);
+
+  const named = String(
+    env?.get(paddleConfigName(resolved, suffix)) ?? '',
+  ).trim();
+
+  if (named) return named;
+
+  // Temporary migration compatibility:
+  // legacy single-environment secrets may only be used when their global
+  // PADDLE_ENVIRONMENT agrees with the explicitly requested environment.
+  if (legacyName && legacyEnvironmentMatches(resolved, env)) {
+    return String(env?.get(legacyName) ?? '').trim();
+  }
+
+  return '';
+}
+
+export function paddleApiKey(environment, env = denoEnv()) {
+  const resolved = paddleEnvironment(environment);
+  const value = paddleConfigValue(
+    resolved,
+    'API_KEY',
+    'PADDLE_API_KEY',
+    env,
+  );
+
+  if (!value) {
+    throw new Error(`Paddle ${resolved} API key is not configured.`);
+  }
+
+  return value;
+}
+
+export function paddleWebhookSecret(environment, env = denoEnv()) {
+  return paddleConfigValue(
+    environment,
+    'WEBHOOK_SECRET',
+    'PADDLE_WEBHOOK_SECRET',
+    env,
+  );
+}
+
 /**
  * Fail closed on a bad environment.
  *
@@ -46,18 +114,45 @@ export function paddleApiHost(env) {
 }
 
 /** The allowed catalogue, from configuration. Live IDs differ from sandbox. */
-export function paddleCatalog(env = denoEnv()) {
-  const productId = String(env?.get('PADDLE_PRODUCT_ID') ?? '').trim();
-  const monthly = String(env?.get('PADDLE_PRO_MONTHLY_PRICE_ID') ?? '').trim();
-  const annual = String(env?.get('PADDLE_PRO_ANNUAL_PRICE_ID') ?? '').trim();
+export function paddleCatalogFor(environment, env = denoEnv()) {
+  const resolved = paddleEnvironment(environment);
+
+  const productId = paddleConfigValue(
+    resolved,
+    'PRODUCT_ID',
+    'PADDLE_PRODUCT_ID',
+    env,
+  );
+  const monthly = paddleConfigValue(
+    resolved,
+    'PRO_MONTHLY_PRICE_ID',
+    'PADDLE_PRO_MONTHLY_PRICE_ID',
+    env,
+  );
+  const annual = paddleConfigValue(
+    resolved,
+    'PRO_ANNUAL_PRICE_ID',
+    'PADDLE_PRO_ANNUAL_PRICE_ID',
+    env,
+  );
+
   if (!productId || !monthly || !annual) {
-    throw new Error('Paddle catalogue is not configured.');
+    throw new Error(`Paddle ${resolved} catalogue is not configured.`);
   }
+
   return Object.freeze({
     productId,
     priceByInterval: Object.freeze({ monthly, annual }),
     intervalByPrice: Object.freeze({ [monthly]: 'monthly', [annual]: 'annual' }),
   });
+}
+
+/**
+ * Legacy wrapper while the generic sandbox functions still exist.
+ * New fixed-environment endpoints use paddleCatalogFor(environment) directly.
+ */
+export function paddleCatalog(env = denoEnv()) {
+  return paddleCatalogFor(env?.get('PADDLE_ENVIRONMENT'), env);
 }
 
 /** The internal option ids the browser is allowed to name. Nothing else. */
@@ -93,8 +188,13 @@ export function resolveBillingOption(optionId) {
  * nobody is authorised. Production is unaffected because these functions are not
  * the production checkout path at all.
  */
-export function isSandboxTester(userId, env = denoEnv()) {
-  if (paddleEnvironment(env?.get('PADDLE_ENVIRONMENT')) !== 'sandbox') return true;
+export function canUsePaddleEnvironment(
+  userId,
+  environment,
+  env = denoEnv(),
+) {
+  const resolved = paddleEnvironment(environment);
+  if (resolved !== 'sandbox') return true;
 
   const raw = String(env?.get('PADDLE_SANDBOX_TESTER_IDS') ?? '').trim();
   if (!raw) return false;
@@ -106,15 +206,37 @@ export function isSandboxTester(userId, env = denoEnv()) {
   return Boolean(id) && allowed.has(id);
 }
 
+/**
+ * Legacy wrapper for the current generic Paddle functions.
+ * Fixed endpoints must call canUsePaddleEnvironment(userId, environment).
+ */
+export function isSandboxTester(userId, env = denoEnv()) {
+  return canUsePaddleEnvironment(
+    userId,
+    env?.get('PADDLE_ENVIRONMENT'),
+    env,
+  );
+}
+
 /* ------------------------------------------------------------------ *
  * API
  * ------------------------------------------------------------------ */
 
-export async function paddleFetch(path, { method = 'GET', body, env = denoEnv() } = {}) {
-  const key = String(env?.get('PADDLE_API_KEY') ?? '').trim();
-  if (!key) throw new Error('PADDLE_API_KEY is not configured.');
+export async function paddleFetch(
+  path,
+  {
+    method = 'GET',
+    body,
+    environment,
+    env = denoEnv(),
+  } = {},
+) {
+  const resolved = paddleEnvironment(
+    environment ?? env?.get('PADDLE_ENVIRONMENT'),
+  );
+  const key = paddleApiKey(resolved, env);
 
-  const response = await fetch(`${paddleApiHost(env?.get('PADDLE_ENVIRONMENT'))}${path}`, {
+  const response = await fetch(`${paddleApiHost(resolved)}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${key}`,
@@ -134,8 +256,11 @@ export async function paddleFetch(path, { method = 'GET', body, env = denoEnv() 
   return payload?.data ?? payload;
 }
 
-export const getPaddleSubscription = (id) => paddleFetch(`/subscriptions/${encodeURIComponent(id)}`);
-export const getPaddleTransaction = (id) => paddleFetch(`/transactions/${encodeURIComponent(id)}`);
+export const getPaddleSubscription = (id, environment) =>
+  paddleFetch(`/subscriptions/${encodeURIComponent(id)}`, { environment });
+
+export const getPaddleTransaction = (id, environment) =>
+  paddleFetch(`/transactions/${encodeURIComponent(id)}`, { environment });
 
 /* ------------------------------------------------------------------ *
  * Webhook signatures

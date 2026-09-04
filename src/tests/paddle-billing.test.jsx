@@ -555,7 +555,13 @@ describe('legacy Gumroad', () => {
 
   it('reconciles Paddle first and falls back to Gumroad', () => {
     const service = stripComments(read('src/services/billing.js'));
-    expect(service.indexOf("invoke('reconcile-paddle')")).toBeLessThan(service.indexOf("invoke('reconcile-gumroad')"));
+
+    const paddleIndex = service.search(/invoke\((['"])reconcile-paddle\1\)/);
+    const gumroadIndex = service.search(/invoke\((['"])reconcile-gumroad\1\)/);
+
+    expect(paddleIndex).toBeGreaterThanOrEqual(0);
+    expect(gumroadIndex).toBeGreaterThanOrEqual(0);
+    expect(paddleIndex).toBeLessThan(gumroadIndex);
   });
 });
 

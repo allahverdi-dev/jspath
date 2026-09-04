@@ -5,7 +5,13 @@ import { MemoryRouter } from 'react-router-dom';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  DEFAULT_WEBHOOK_TOLERANCE_SECONDS, isSandboxTester, verifyPaddleSignature,
+  DEFAULT_WEBHOOK_TOLERANCE_SECONDS,
+  canUsePaddleEnvironment,
+  isSandboxTester,
+  paddleApiKey,
+  paddleCatalogFor,
+  paddleWebhookSecret,
+  verifyPaddleSignature,
   webhookToleranceSeconds,
 } from '../../supabase/functions/_shared/paddle.js';
 import {
@@ -181,6 +187,98 @@ describe('multiple h1 signatures', () => {
 const env = (values) => ({ get: (key) => values[key] });
 const TESTER = '3f1a2b4c-5d6e-4f70-8a91-b2c3d4e5f607';
 const OTHER = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
+
+describe('explicit Paddle environment isolation', () => {
+  it('uses separate named credentials and catalogues for sandbox and production', () => {
+    const e = env({
+      PADDLE_ENVIRONMENT: 'sandbox',
+
+      PADDLE_SANDBOX_API_KEY: 'sandbox-key',
+      PADDLE_LIVE_API_KEY: 'live-key',
+
+      PADDLE_SANDBOX_WEBHOOK_SECRET: 'sandbox-webhook',
+      PADDLE_LIVE_WEBHOOK_SECRET: 'live-webhook',
+
+      PADDLE_SANDBOX_PRODUCT_ID: 'sandbox-product',
+      PADDLE_LIVE_PRODUCT_ID: 'live-product',
+
+      PADDLE_SANDBOX_PRO_MONTHLY_PRICE_ID: 'sandbox-monthly',
+      PADDLE_LIVE_PRO_MONTHLY_PRICE_ID: 'live-monthly',
+
+      PADDLE_SANDBOX_PRO_ANNUAL_PRICE_ID: 'sandbox-annual',
+      PADDLE_LIVE_PRO_ANNUAL_PRICE_ID: 'live-annual',
+    });
+
+    expect(paddleApiKey('sandbox', e)).toBe('sandbox-key');
+    expect(paddleApiKey('production', e)).toBe('live-key');
+
+    expect(paddleWebhookSecret('sandbox', e)).toBe('sandbox-webhook');
+    expect(paddleWebhookSecret('production', e)).toBe('live-webhook');
+
+    expect(paddleCatalogFor('sandbox', e)).toMatchObject({
+      productId: 'sandbox-product',
+      priceByInterval: {
+        monthly: 'sandbox-monthly',
+        annual: 'sandbox-annual',
+      },
+    });
+
+    expect(paddleCatalogFor('production', e)).toMatchObject({
+      productId: 'live-product',
+      priceByInterval: {
+        monthly: 'live-monthly',
+        annual: 'live-annual',
+      },
+    });
+  });
+
+  it('never reuses legacy sandbox secrets for production', () => {
+    const e = env({
+      PADDLE_ENVIRONMENT: 'sandbox',
+      PADDLE_API_KEY: 'legacy-sandbox-key',
+      PADDLE_WEBHOOK_SECRET: 'legacy-sandbox-webhook',
+      PADDLE_PRODUCT_ID: 'legacy-sandbox-product',
+      PADDLE_PRO_MONTHLY_PRICE_ID: 'legacy-sandbox-monthly',
+      PADDLE_PRO_ANNUAL_PRICE_ID: 'legacy-sandbox-annual',
+    });
+
+    expect(paddleApiKey('sandbox', e)).toBe('legacy-sandbox-key');
+    expect(paddleWebhookSecret('sandbox', e)).toBe('legacy-sandbox-webhook');
+
+    expect(() => paddleApiKey('production', e)).toThrow(/production/i);
+    expect(paddleWebhookSecret('production', e)).toBe('');
+    expect(() => paddleCatalogFor('production', e)).toThrow(/production/i);
+  });
+
+  it('never reuses legacy production secrets for sandbox', () => {
+    const e = env({
+      PADDLE_ENVIRONMENT: 'production',
+      PADDLE_API_KEY: 'legacy-live-key',
+      PADDLE_WEBHOOK_SECRET: 'legacy-live-webhook',
+      PADDLE_PRODUCT_ID: 'legacy-live-product',
+      PADDLE_PRO_MONTHLY_PRICE_ID: 'legacy-live-monthly',
+      PADDLE_PRO_ANNUAL_PRICE_ID: 'legacy-live-annual',
+    });
+
+    expect(paddleApiKey('production', e)).toBe('legacy-live-key');
+    expect(paddleWebhookSecret('production', e)).toBe('legacy-live-webhook');
+
+    expect(() => paddleApiKey('sandbox', e)).toThrow(/sandbox/i);
+    expect(paddleWebhookSecret('sandbox', e)).toBe('');
+    expect(() => paddleCatalogFor('sandbox', e)).toThrow(/sandbox/i);
+  });
+
+  it('authorizes sandbox explicitly instead of trusting the global environment', () => {
+    const e = env({
+      PADDLE_ENVIRONMENT: 'production',
+      PADDLE_SANDBOX_TESTER_IDS: TESTER,
+    });
+
+    expect(canUsePaddleEnvironment(TESTER, 'sandbox', e)).toBe(true);
+    expect(canUsePaddleEnvironment(OTHER, 'sandbox', e)).toBe(false);
+    expect(canUsePaddleEnvironment(OTHER, 'production', e)).toBe(true);
+  });
+});
 
 describe('the sandbox tester allowlist', () => {
   it('lets an allow-listed tester through in sandbox', () => {
