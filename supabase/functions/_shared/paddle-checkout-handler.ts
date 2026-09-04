@@ -105,7 +105,7 @@ export function createPaddleCheckoutHandler(environment: 'sandbox' | 'production
       billing_interval: option.billingInterval,
       status: 'pending',
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'provider,provider_transaction_id' });
+    }, { onConflict: 'provider,provider_environment,provider_transaction_id' });
 
   if (mappingError) {
     // Without the mapping there is no recovery path, so this is a failure and

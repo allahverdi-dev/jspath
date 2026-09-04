@@ -98,7 +98,7 @@ export function createPaddleReconcileHandler(environment: 'sandbox' | 'productio
 
     const { error: upsertError } = await admin
       .from('subscriptions')
-      .upsert({ ...record, user_id: user.id }, { onConflict: 'provider,provider_subscription_id' });
+      .upsert({ ...record, user_id: user.id }, { onConflict: 'provider,provider_environment,provider_subscription_id' });
     return !upsertError;
   };
 
