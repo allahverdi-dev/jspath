@@ -1,5 +1,6 @@
 import { getSupabase, getSession } from './supabase.js';
 import { isPremiumWithheld, PREMIUM_WITHHELD } from '../features/billing/premiumFields.js';
+import { billingFunctionRoutes } from '../features/billing/functionRoutes.js';
 
 /**
  * Fetch the paid half of Pro content.
@@ -57,6 +58,8 @@ export async function fetchPremiumContent(kind, id, { userId } = {}) {
   const supabase = getSupabase();
   if (!supabase) return { status: PREMIUM_STATUS.UNAVAILABLE, content: null };
 
+  const routes = billingFunctionRoutes();
+
   // Resolve the owner ourselves when the caller has not supplied one, so the
   // cache is always partitioned even when a getter deep in the registry asks.
   let owner = userId;
@@ -73,7 +76,7 @@ export async function fetchPremiumContent(kind, id, { userId } = {}) {
 
   const request = (async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('premium-content', {
+      const { data, error } = await supabase.functions.invoke(routes.premiumContent, {
         body: { keys: [cacheKey] },
       });
       if (error) {

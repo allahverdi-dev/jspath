@@ -556,7 +556,7 @@ describe('legacy Gumroad', () => {
   it('reconciles Paddle first and falls back to Gumroad', () => {
     const service = stripComments(read('src/services/billing.js'));
 
-    const paddleIndex = service.search(/invoke\((['"])reconcile-paddle\1\)/);
+    const paddleIndex = service.indexOf("invoke(routes.reconcilePaddle)");
     const gumroadIndex = service.search(/invoke\((['"])reconcile-gumroad\1\)/);
 
     expect(paddleIndex).toBeGreaterThanOrEqual(0);

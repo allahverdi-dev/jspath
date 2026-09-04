@@ -1,4 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase.js";
+import { billingFunctionRoutes } from "../features/billing/functionRoutes.js";
 
 export async function loadOwnSubscriptions(userId) {
   const supabase = getSupabase();
@@ -56,30 +57,54 @@ async function invoke(name, body) {
  * there is no email, transaction or subscription id for a browser to supply.
  */
 export async function reconcileOwnSubscription() {
-  const paddle = await invoke("reconcile-paddle");
-  if (paddle.data?.ok === true && paddle.data.matched === true) return paddle;
+  const routes = billingFunctionRoutes();
+  let paddle = null;
+
+  if (routes.reconcilePaddle) {
+    paddle = await invoke(routes.reconcilePaddle);
+    if (paddle.data?.ok === true && paddle.data.matched === true) {
+      return paddle;
+    }
+  }
 
   const gumroad = await invoke("reconcile-gumroad");
-  if (gumroad.data?.ok === true && gumroad.data.matched === true)
+  if (gumroad.data?.ok === true && gumroad.data.matched === true) {
     return gumroad;
+  }
 
-  // Nothing found anywhere. Report a definite "no purchase" only when at least
-  // one provider actually answered; otherwise surface the error so the caller
-  // offers a retry instead of telling the learner they never bought anything.
-  if (paddle.data?.ok === true || gumroad.data?.ok === true) {
+  if (paddle?.data?.ok === true || gumroad.data?.ok === true) {
     return { data: { ok: true, matched: false }, error: null };
   }
-  return paddle.error ? paddle : gumroad;
+
+  return paddle?.error ? paddle : gumroad;
 }
 
 /** Start a Paddle checkout. The option id is the only thing the browser names. */
 export async function startPaddleCheckout(optionId) {
-  return invoke("paddle-checkout", { option: optionId });
+  const routes = billingFunctionRoutes();
+
+  if (!routes.paddleCheckout) {
+    return {
+      data: null,
+      error: { message: "Paddle checkout is unavailable in this billing mode." },
+    };
+  }
+
+  return invoke(routes.paddleCheckout, { option: optionId });
 }
 
 /** An authenticated, temporary Paddle customer portal link. Never cached. */
 export async function createPaddlePortalSession() {
-  return invoke("paddle-portal");
+  const routes = billingFunctionRoutes();
+
+  if (!routes.paddlePortal) {
+    return {
+      data: null,
+      error: { message: "Paddle portal is unavailable in this billing mode." },
+    };
+  }
+
+  return invoke(routes.paddlePortal);
 }
 
 export function isEntitlementBackendConfigured() {
