@@ -1,5 +1,10 @@
 # Gumroad billing and JSPath entitlements
 
+> **Legacy.** New paid subscriptions go through Paddle - see the Paddle
+> section of `docs/DEPLOYMENT.md`. Everything here still applies to existing
+> `provider = 'gumroad'` rows, which keep granting Pro and keep being managed
+> at Gumroad. Nothing is converted, and neither Gumroad function is removed.
+
 JSPath billing is optional. Without the public checkout URLs or the server-side
 configuration, authentication and the existing guest/free learning experience keep
 working. A checkout redirect never grants access.
@@ -296,3 +301,71 @@ which is a different table with a different lifecycle — deleted with the
 account, cascaded, gone. A recreated account is a new learning profile that may
 carry an old purchase. The Privacy Policy and the delete-account dialog both
 say so.
+
+---
+
+## PADDLE LIVE CUTOVER BLOCKER — refund and chargeback entitlement
+
+**Status: undecided. This blocks enabling production Paddle billing.**
+
+The thing that makes this a decision rather than an implementation detail:
+
+> In Paddle, a refund is a **financial adjustment**. Cancelling a subscription is
+> a **separate lifecycle operation**. Refunding a transaction does not cancel the
+> subscription, and refund adjustments are reviewed and approved by Paddle rather
+> than being final when they are requested.
+
+So an approved refund produces **no `subscription.updated` event** unless someone
+also cancels the subscription. JSPath currently reacts only to subscription
+events, which means today:
+
+- a refund alone does **not** revoke Pro
+- the subscription keeps renewing unless it is also cancelled
+
+That is a coherent position, but it is not an owner decision — it is what falls
+out of not having made one. `adjustment.updated` is deliberately **not** enabled,
+because subscribing to it would force a choice about what a refund does to
+access, and guessing that is exactly what this project does not do.
+
+### Interim operational rule
+
+Until the decision is made, a refund that is meant to end access must be done in
+**two** steps in the Paddle dashboard:
+
+1. refund the transaction, **and**
+2. cancel the subscription
+
+Step 2 is what JSPath sees. Step 1 alone leaves Pro running.
+
+This is a real operational footgun. It is written down rather than papered over.
+
+### What the owner has to decide
+
+| Case | Question | Recommendation (not yet approved) |
+| --- | --- | --- |
+| Approved **full** refund | Should Pro end immediately, at period end, or not at all? | Revoke Pro and stop future renewal |
+| Approved **partial** refund | Any entitlement change? | None — a partial credit is not a cancellation |
+| **Chargeback** | Revoke immediately? | Revoke Pro |
+| **Chargeback reversed** | Restore access? Under what conditions? | Needs explicit recovery semantics |
+| Refund **pending** or **rejected** | Any change? | None until approved |
+| Refund inside the published 10-day window | Same as any full refund? | Presumably, but state it |
+
+The right-hand column is a **recommendation only**. Nothing in it is
+implemented, and none of it should be until it is approved.
+
+### If and when it is approved
+
+Enabling `adjustment.updated` would then also require:
+
+- distinguishing `action: refund` from `action: credit`
+- acting only on `status: approved`, never `pending_approval` or `rejected`
+- comparing the adjustment total against the transaction total to tell a partial
+  refund from a full one, which means fetching the transaction
+- deciding whether JSPath cancels the Paddle subscription itself — which needs a
+  write-scoped API key it does not currently have
+
+**Do not add subscription write permission to solve an undecided policy.**
+
+Note this is a *stricter* situation than Gumroad's, where a `refund` webhook
+maps straight to a `refunded` status and revokes access. The Gumroad path is
+unchanged and keeps working exactly as it does today.

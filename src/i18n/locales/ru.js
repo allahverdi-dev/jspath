@@ -1,14 +1,3 @@
-/**
- * Русский.
- *
- * О терминологии: устоявшиеся английские термины (JavaScript, DOM, API,
- * Promise, callback, closure, prototype, array, object, fetch, HTTP, JSON, Pro,
- * Free, XP, Playground) не переводятся — русскоязычный разработчик читает их
- * по-английски, и «замыкание» вместо `closure` делает интерфейс менее ясным.
- *
- * Множественное число: `one` / `few` / `many` по правилам русского языка
- * (1 урок, 2 урока, 5 уроков, 21 урок).
- */
 export default {
   common: {
     all: 'Все',
@@ -251,7 +240,7 @@ export default {
     flexibleBilling: 'Гибкая оплата',
     chooseMonthly: 'Помесячно',
     chooseAnnual: 'На год',
-    gumroadNotice: 'Цены и платёжные данные безопасно отображает Gumroad.',
+    checkoutNotice: 'Оплату безопасно обрабатывает Paddle — официальный продавец JSPath Pro.',
     freePlanDescription: 'Полная программа по JavaScript и синхронизация прогресса в облаке.',
     proPlanDescription:
       'Углублённая практика, проекты, подготовка к собеседованию и аналитика освоения.',
@@ -324,6 +313,14 @@ export default {
     restoreRestored: 'Покупка Pro найдена и восстановлена для этого аккаунта.',
     restoreNotFound: 'Подходящая покупка для этого аккаунта не найдена. Если вы платили с другого адреса электронной почты, войдите с него.',
     restoreFailed: 'Сейчас не удалось проверить покупку. Ничего не изменено - попробуйте ещё раз через минуту.',
+    chooseMonthlyPriced: '{amount} в месяц',
+    chooseAnnualPriced: '{amount} в год',
+    annualSaving: 'Годовая оплата экономит {amount} в год.',
+    checkoutFailed: 'Не удалось перейти к оплате. Списаний не было - попробуйте ещё раз.',
+    checkoutUnavailable: 'Не удалось открыть окно оплаты. Проверьте, не блокирует ли его браузер, и попробуйте снова.',
+    portalUnavailable: 'Сейчас не удалось открыть платёжный портал. Попробуйте ещё раз через минуту.',
+    statusPaused: 'Приостановлена',
+    pastDueRetrying: 'Проблема с оплатой - доступ к Pro сохраняется, пока платёж повторяется. Обновите способ оплаты, чтобы не потерять его.',
   },
 
   landing: {
@@ -1144,9 +1141,9 @@ export default {
     decisionGoverningLaw: 'применимое право',
     decisionDeletion: 'удаление учётной записи',
     decisionMinimumAge: 'минимальный возраст',
-    copyEmail: 'Скопировать адрес',
-    emailCopied: 'Адрес скопирован',
-    emailCopyFailed: 'Не удалось скопировать адрес. Выделите и скопируйте его вручную.',
+    copyEmail: 'Скопировать e-mail',
+    emailCopied: 'E-mail скопирован',
+    emailCopyFailed: 'Не удалось скопировать e-mail. Выделите и скопируйте его вручную.',
   },
 
   footer: {

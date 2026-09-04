@@ -4,8 +4,14 @@ import { Badge, Button, Card, Icon, SectionLabel } from '../components/ui/index.
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import {
-  CHECKOUT_OPTIONS, GUMROAD_MANAGE_URL, createCheckoutUrl, createUpgradeAuthPath, getCheckoutOption,
+  ANNUAL_SAVING, CHECKOUT_OPTIONS, createGumroadCheckoutUrl, createUpgradeAuthPath,
+  getCheckoutOption, isBillingConfigured as isCheckoutConfigured, isPaddleCheckoutMode,
 } from '../features/billing/plans.js';
+import { startPaddleCheckout } from '../services/billing.js';
+import {
+  onPaddleCheckoutEvent, openPaddleCheckout, PADDLE_CHECKOUT_RESULT, PADDLE_EVENT,
+} from '../services/paddle.js';
+import { ManageSubscriptionButton } from '../components/billing/ManageSubscriptionButton.jsx';
 import { subscriptionGrantsPro } from '../features/billing/entitlements.js';
 import { CONTENT_ALLOCATION as allocation } from '../features/billing/contentAllocation.js';
 import { useI18n } from '../i18n/index.jsx';
@@ -42,8 +48,11 @@ export default function Pricing() {
   const { plan, isPro, subscription, loading, billingConfigured, reconcile, refresh } = useEntitlements();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const [confirmation, setConfirmation] = useState(params.get('purchase') === 'success' ? 'confirming' : 'idle');
+  const [checkoutBusy, setCheckoutBusy] = useState(null);
+  const [checkoutError, setCheckoutError] = useState(null);
+  const checkoutConfigured = isCheckoutConfigured();
   const startedConfirmation = useRef(false);
   const selectedOption = getCheckoutOption(params.get('checkout'));
 
@@ -74,6 +83,23 @@ export default function Pricing() {
     if (isPro && confirmation === 'confirming') setConfirmation('confirmed');
   }, [isPro, confirmation]);
 
+  /*
+   * Closing Paddle's overlay without paying has to give the page back. Without
+   * this the button stays in its loading state and the learner cannot retry -
+   * the checkout is gone but the UI still thinks one is in flight.
+   *
+   * Closing is explicitly *not* a purchase: it clears the busy state and does
+   * nothing else. A completed checkout is not trusted here either - it only
+   * redirects to `?purchase=success`, and Pro still comes from reconciling
+   * against trusted subscription state.
+   */
+  useEffect(() => onPaddleCheckoutEvent((event) => {
+    if (event?.name === PADDLE_EVENT.CLOSED) {
+      setCheckoutBusy(null);
+      setCheckoutError(null);
+    }
+  }), []);
+
   // Dates follow the app locale, not the browser's: the learner chose a language
   // in Settings and a renewal date in another format reads as a different product.
   const statusMessage = useMemo(() => {
@@ -87,20 +113,67 @@ export default function Pricing() {
         : t('billing.cancelingNoDate');
     }
     if (subscription.status === 'past_due') {
-      return until
-        ? t('billing.pastDueUntil', { date: until })
-        : t('billing.pastDueNoDate');
+      /*
+       * Deliberately dateless. The period end has already elapsed for a
+       * past_due subscription, and it is not what bounds access - the provider
+       * is, by retrying and then either restoring or cancelling. Quoting that
+       * date would tell the learner their access ends on a day already past.
+       */
+      return t('billing.pastDueRetrying');
     }
     return until ? t('billing.renewalOn', { date: until }) : t('billing.membershipActive');
   }, [subscription, t, formatDate]);
 
-  const startCheckout = (option) => {
+  /*
+   * Checkout is created by the server, then opened by Paddle.js.
+   *
+   * The browser names an internal option id and nothing else - no price, no
+   * product, no user. `paddle-checkout` maps that to a configured price and
+   * writes the account binding into the transaction, so what opens is exactly
+   * what the server decided to sell.
+   */
+  const startCheckout = async (option) => {
     if (!isAuthenticated) {
       navigate(createUpgradeAuthPath(option.id));
       return;
     }
-    const checkoutUrl = createCheckoutUrl(option, user);
-    if (checkoutUrl) window.location.assign(checkoutUrl);
+    if (checkoutBusy) return;
+
+    /*
+     * Production still buys through Gumroad. Paddle is sandbox-only until live
+     * cutover is approved, and a sandbox payment costs nothing - letting an
+     * ordinary production learner reach it would be giving Pro away.
+     */
+    if (!isPaddleCheckoutMode()) {
+      const url = createGumroadCheckoutUrl(option, user);
+      if (url) window.location.assign(url);
+      else setCheckoutError('billing.checkoutFailed');
+      return;
+    }
+
+    setCheckoutBusy(option.id);
+    setCheckoutError(null);
+
+    const { data, error } = await startPaddleCheckout(option.id);
+    if (error || data?.ok !== true || !data.transactionId) {
+      setCheckoutBusy(null);
+      setCheckoutError('billing.checkoutFailed');
+      return;
+    }
+
+    const opened = await openPaddleCheckout({
+      transactionId: data.transactionId,
+      successUrl: `${window.location.origin}/pricing?purchase=success`,
+      locale,
+    });
+    // Returning from the overlay proves nothing on its own; entitlement still
+    // comes from the confirmation flow below reading trusted state.
+    if (opened !== PADDLE_CHECKOUT_RESULT.OPENED) {
+      setCheckoutBusy(null);
+      setCheckoutError('billing.checkoutUnavailable');
+    }
+    // When it did open, `checkout.closed` clears the busy state on dismissal and
+    // a completed payment navigates away, so it is not cleared here.
   };
 
   const retryConfirmation = async () => {
@@ -171,25 +244,40 @@ export default function Pricing() {
             {proBenefits(t).map((item) => <li key={item} className="flex gap-2 font-body-sm text-on-surface-variant"><Icon name="check" size={17} className="mt-0.5 text-primary-ink" />{item}</li>)}
           </ul>
           {isPro ? (
-            <Button href={GUMROAD_MANAGE_URL} target="_blank" rel="noreferrer" variant="secondary" className="mt-6 w-full">{t('billing.managePlan')}</Button>
+            <ManageSubscriptionButton className="mt-6 w-full" />
           ) : (
-            <div className="mt-6 grid gap-2 sm:grid-cols-2">
-              {Object.values(CHECKOUT_OPTIONS).map((option) => (
-                <Button
-                  key={option.id}
-                  variant={selectedOption?.id === option.id ? 'primary' : 'secondary'}
-                  disabled={!option.checkoutUrl || loading}
-                  onClick={() => startCheckout(option)}
-                >
-                  {option.billingInterval === 'annual' ? t('billing.chooseAnnual') : t('billing.chooseMonthly')}
-                </Button>
-              ))}
-            </div>
+            <>
+              <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                {Object.values(CHECKOUT_OPTIONS).map((option) => (
+                  <Button
+                    key={option.id}
+                    variant={selectedOption?.id === option.id ? 'primary' : 'secondary'}
+                    disabled={!checkoutConfigured || loading || Boolean(checkoutBusy)}
+                    loading={checkoutBusy === option.id}
+                    onClick={() => startCheckout(option)}
+                  >
+                    {option.billingInterval === 'annual'
+                      ? t('billing.chooseAnnualPriced', { amount: option.amount })
+                      : t('billing.chooseMonthlyPriced', { amount: option.amount })}
+                  </Button>
+                ))}
+              </div>
+              <p className="mt-2 text-center font-body-sm text-on-surface-variant">
+                {checkoutConfigured
+                  ? t('billing.annualSaving', { amount: ANNUAL_SAVING })
+                  : t('billing.billingUnavailable')}
+              </p>
+              {checkoutError && (
+                <p role="alert" className="mt-3 rounded border border-error/30 bg-error/5 px-3 py-2 font-body-sm text-on-surface">
+                  {t(checkoutError)}
+                </p>
+              )}
+            </>
           )}
           {/* Renders itself only for a signed-in learner without Pro. */}
           <RestorePurchase className="mt-5" />
           <p className="mt-3 text-center font-body-sm text-on-surface-variant">
-            {t('billing.gumroadNotice')}{' '}
+            {t('billing.checkoutNotice')}{' '}
             <Link to="/refund-policy" className="text-primary-ink underline underline-offset-2">
               {t('legal.refund')}
             </Link>

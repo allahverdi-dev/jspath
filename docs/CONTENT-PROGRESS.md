@@ -20,7 +20,8 @@ Status of each content pillar. Counts come from
 | Production defect remediation | **COMPLETE** | text fragmentation and auth-aware landing |
 | Legal / trust layer | **COMPLETE** | all five owner decisions published |
 | Account deletion | **COMPLETE** | Settings danger zone, server-side, subscription-safe |
-| Purchase restore | **COMPLETE** | recreated accounts can claim a valid Gumroad purchase |
+| Purchase restore | **COMPLETE** | recreated accounts can claim a valid purchase |
+| Paddle migration | **SANDBOX** | isolated from production; Gumroad still sells |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -662,7 +663,7 @@ All gates green as of the last run:
 | `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 838 passed (32 files) |
+| `npm test` | 1037 passed (34 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -952,6 +953,133 @@ Tailwind config, so a class that compiles to nothing cannot ship again.
 Three arbitrary sizes remain in `AppShell` (`text-[13px]`, `text-[15px]`,
 `text-[10px]`). They are deliberate one-offs in the logo and the mobile tab bar,
 predate this work, and were left alone.
+
+## Paddle Billing (sandbox)
+
+New paid subscriptions move from Gumroad to Paddle. Gumroad is not removed:
+existing rows keep granting Pro, both Gumroad functions stay deployed, and
+reconciliation falls back to them. See `docs/DEPLOYMENT.md` for setup and
+`docs/BILLING_GUMROAD.md` for how the two providers now sit side by side.
+
+The security model is unchanged, which was the point. The browser names an
+internal option id - `pro-monthly` or `pro-annual` - and nothing else. The server
+maps it to a configured price, creates the transaction, and writes the account
+binding into `custom_data` itself. Paddle.js is then handed a transaction id. It
+cannot choose a price, a product, a customer or a user.
+
+### Decisions worth recording
+
+**A draft transaction is fine.** Paddle documents that a draft or ready
+transaction can be passed to `Checkout.open`, and that the checkout collects the
+customer and address. So the server creates the transaction with items and
+custom data only, and never has to invent customer details to satisfy an API.
+
+**Scheduled cancellation is not cancellation.** Paddle keeps the subscription
+`active` and hangs a `scheduled_change` off it. Reading `status` alone would show
+a leaving customer as renewing; reacting to the word "cancel" alone would cut
+their access off on the day they asked rather than the day they paid through.
+JSPath maps it to `canceling` with `current_period_end = effective_at`.
+
+**`paused` is a new normalized status.** It grants no Pro, but it is neither
+expired nor revoked, and a paused plan can resume. Calling it "Expired" in
+Settings would have been a lie, so the vocabulary grew by one.
+
+**A full refund does not cancel a Paddle subscription**, and refund adjustments
+need Paddle's approval. `adjustment.updated` is therefore deliberately not
+consumed: acting on it would mean inventing a rule about whether a refund ends
+access early, which nobody has decided. `subscription.updated` stays the single
+authority.
+
+**Two Gumroad-era NOT NULLs could not hold.** `provider_sale_id` and
+`customer_email` have no Paddle equivalent at `subscription.created`. Rather than
+fabricate values, both became nullable and a per-provider CHECK re-imposes them
+on Gumroad rows - so nothing that was true of a Gumroad row before is untrue now.
+
+**Recovery uses a server-owned mapping.** `billing_checkout_sessions` records
+which authenticated user a transaction was created for, at the moment it is
+created. Recovery reads a mapping JSPath wrote itself instead of searching the
+provider by an email the browser supplied. The browser has no access to that
+table at all.
+
+## Paddle pre-deploy hardening
+
+A security and lifecycle pass over the Paddle work before anything is deployed.
+Four findings, two of them defects in what I had already reported as done.
+
+### The one that mattered: production would have lost its checkout
+
+The first implementation made `isBillingConfigured()` return true whenever a
+Paddle client token was present, and removed the Gumroad checkout path. Deployed
+as it stood, production would either have had **no checkout at all**, or - given
+a sandbox token - would have handed real learners a sandbox checkout that costs
+nothing and grants real Pro.
+
+Fixed with an explicit `VITE_BILLING_MODE`: `gumroad-production` (today),
+`paddle-sandbox`, `paddle-production`. Unset or unrecognised means
+`gumroad-production`, so failing closed means failing to what production already
+does. The Gumroad checkout builder is back and is what production uses.
+
+The flag is a UI decision only. The real boundary is server-side: in sandbox,
+the three authenticated Paddle functions refuse anyone not in
+`PADDLE_SANDBOX_TESTER_IDS`, compared against the id in the verified JWT. No
+allowlist configured means nobody is authorised.
+
+### past_due revoked Pro immediately
+
+`subscriptionGrantsPro` judged every subscription on `current_period_end > now`.
+A past_due subscription has an elapsed period **by definition** - that is why
+payment is due - so a genuinely past_due Paddle subscriber lost Pro the moment a
+renewal failed, which is the opposite of Paddle's provisioning guidance and of
+what the previous report claimed.
+
+The test that should have caught it used a period end in the *future*, which no
+real past_due subscription has. It passed for the wrong reason. It now uses an
+elapsed period, and there is a second test for the inverse risk.
+
+The first fix then over-corrected: it bounded past_due access by how recently
+the row had been verified, which is a *second* invented rule - Paddle's model
+has no such concept and nobody approved a staleness cutoff. Removed.
+
+Paddle `past_due` now simply grants Pro. Paddle owns the recovery window: it
+retries the payment, and either the payment succeeds and the subscription
+returns to `active`, or recovery is exhausted and Paddle moves it to `canceled`,
+which arrives here as `expired` and grants nothing. Following the provider's
+status is both simpler and more correct than any grace period of ours. Webhook
+ordering and idempotency keep state moving forwards; reconciliation refreshes it
+on demand. `last_verified_at` stays as metadata and as the fallback for rows
+with no period at all. Scoped to Paddle; Gumroad is unchanged.
+
+### Sandbox rows could have become live entitlements
+
+Sandbox and live are different Paddle accounts but both write
+`provider = 'paddle'`. A subscription bought with a test card would have become
+a real entitlement the day the deployment went live. The migration - never
+deployed, so amended in place rather than corrected by a second migration - now
+records `provider_environment`, and the resolver refuses a row whose environment
+does not match the running deployment.
+
+### Webhook tolerance: 300s back to 5s
+
+The 300-second replay window was justified by a cold start nobody had measured.
+Paddle documents 5 seconds and signs retries normally, so a retry arrives with a
+fresh timestamp and needs no wider window. Now 5s by default, overridable only
+through a server-side secret, bounded at 300s, with invalid values falling back
+to 5 rather than being honoured.
+
+### Also
+
+`checkout.closed` now returns the pricing page to a usable state - previously
+dismissing the overlay left the button stuck in its loading state with no way to
+retry. Closing grants nothing and shows no success. The listener unsubscribes on
+unmount.
+
+Refund and chargeback entitlement semantics are documented as an explicit
+**live cutover blocker** rather than guessed at, because in Paddle a refund is a
+financial adjustment that does not cancel a subscription. `adjustment.updated`
+stays disabled. See `docs/BILLING_GUMROAD.md`.
+
+The legal policies still say Gumroad, because production still sells through
+Gumroad. `docs/LEGAL.md` carries the checklist of what changes at cutover.
 
 ## Next phase
 

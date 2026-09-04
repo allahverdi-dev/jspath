@@ -10,8 +10,8 @@ import {
   subscriptionNeedsReconciliation,
 } from "./entitlements.js";
 import {
+  CHECKOUT_OPTIONS,
   FEATURE,
-  createCheckoutUrl,
   createUpgradeAuthPath,
   safeApplicationPath,
 } from "./plans.js";
@@ -189,19 +189,18 @@ describe("checkout intent", () => {
     ).toBe("/");
   });
 
-  it("prefills identity as a hint without creating entitlement state", () => {
-    const option = {
-      checkoutUrl: "https://creator.gumroad.com/l/jspath",
-      billingInterval: "monthly",
-    };
-    const checkout = new URL(
-      createCheckoutUrl(option, {
-        id: "user-123",
-        email: "learner@example.com",
-      }),
-    );
-    expect(checkout.searchParams.get("email")).toBe("learner@example.com");
-    expect(checkout.searchParams.get("JSPath account ID")).toBe("user-123");
+  it("exposes no checkout URL or price to the browser", () => {
+    // Gumroad's flow built a checkout URL client-side, with the buyer's email in
+    // it. Paddle's transaction is created by the server, so the browser holds
+    // only an internal option id - no price, no product, no identity.
+    for (const option of Object.values(CHECKOUT_OPTIONS)) {
+      expect(option).not.toHaveProperty("checkoutUrl");
+      expect(JSON.stringify(option)).not.toMatch(/pri_|pro_|gumroad/i);
+    }
+    expect(Object.keys(CHECKOUT_OPTIONS)).toEqual(["pro-monthly", "pro-annual"]);
+  });
+
+  it("still grants nothing without a trusted subscription row", () => {
     expect(
       resolveEntitlement({ authenticated: true, subscriptions: [], now: NOW })
         .isPro,

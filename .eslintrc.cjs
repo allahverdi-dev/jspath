@@ -22,6 +22,12 @@ module.exports = {
       env: { node: true, browser: false },
     },
     {
+      // Supabase Edge Functions run in Deno, not the browser or Node.
+      files: ['supabase/functions/**/*.{js,ts}'],
+      env: { browser: false, node: false },
+      globals: { Deno: 'readonly', crypto: 'readonly', fetch: 'readonly', Response: 'readonly', Request: 'readonly', TextEncoder: 'readonly' },
+    },
+    {
       files: ['src/**/*.{test,spec}.{js,jsx}', 'src/tests/**'],
       env: { node: true },
       globals: { describe: 'readonly', it: 'readonly', expect: 'readonly', beforeEach: 'readonly', afterEach: 'readonly', vi: 'readonly' },

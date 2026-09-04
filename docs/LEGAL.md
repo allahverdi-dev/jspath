@@ -104,9 +104,44 @@ put it in the learning registry, the search index and the premium pipeline.
 ## Billing provider dependency
 
 The policies name **Gumroad** as the seller of record, because that is what
-`.env.example`, `supabase/migrations`, `supabase/functions` and
-`features/billing/plans.js` implement. Prices are deliberately absent: `plans.js`
-sets `price: null` and prices live at Gumroad.
+production actually sells through. Paddle exists in the codebase but is
+**sandbox only**, and `VITE_BILLING_MODE` defaults to `gumroad-production`.
+
+**Do not change the policies to say Paddle while Paddle is sandbox.** That would
+make the published documents false about the live product, which is the one
+thing this layer exists to prevent. Prices stay out of the policies entirely;
+the checkout shows them.
+
+### Legal changes required at Paddle live cutover
+
+Part of the cutover checklist in `docs/DEPLOYMENT.md`. Nothing here is a new
+fact to invent — each item is a change of *which* true statement applies.
+
+- [ ] `LEGAL_FACTS.billingProvider` → `Paddle`, and `LAST_UPDATED` bumped
+- [ ] **Terms → Subscriptions and payment**: new purchases are processed by
+      Paddle as seller of record; card details are handled by Paddle and never
+      received by JSPath
+- [ ] **Terms → Cancelling**: management happens in Paddle's customer portal for
+      Paddle subscriptions; subscriptions bought earlier through Gumroad continue
+      to be managed at Gumroad
+- [ ] **Terms → Services JSPath relies on**: Paddle added; Gumroad retained and
+      described as covering existing subscriptions
+- [ ] **Privacy → Billing data**: Paddle is the party receiving the email and
+      account identifier at checkout; card details still never reach JSPath
+- [ ] **Privacy → Who else is involved**: Paddle added alongside Gumroad
+- [ ] **Privacy → Deleting your account**: provider-controlled financial records
+      are not erased by deleting a JSPath account — true of both providers, so
+      the wording must cover both rather than naming only one
+- [ ] **Refund Policy → Who you pay**: the seller of record depends on when the
+      subscription was bought
+- [ ] **Refund Policy**: reflect whatever refund/chargeback entitlement
+      semantics the owner decides — see the blocker in `docs/BILLING_GUMROAD.md`
+- [ ] all three locales updated together, parity tests green
+- [ ] `legal.test.jsx` provider assertions updated in the same change
+
+The suite currently asserts the copy names Gumroad and no other provider, so
+changing the provider **will** fail those tests. That is deliberate: the failure
+is the reminder to update the policies rather than the code alone.
 
 `legal.test.jsx` fails if the copy names a provider the code does not integrate,
 or stops naming the one it does. Changing provider therefore breaks the tests on

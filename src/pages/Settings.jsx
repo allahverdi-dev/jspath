@@ -7,7 +7,7 @@ import { useToast } from '../state/ToastProvider.jsx';
 import { isPersistent, usageBytes } from '../services/storage.js';
 import { useAuth } from '../state/AuthProvider.jsx';
 import { useEntitlements } from '../state/EntitlementProvider.jsx';
-import { GUMROAD_MANAGE_URL } from '../features/billing/plans.js';
+import { ManageSubscriptionButton } from '../components/billing/ManageSubscriptionButton.jsx';
 import { useI18n } from '../i18n/index.jsx';
 import { DeleteAccountSection } from '../components/settings/DeleteAccountSection.jsx';
 import { RestorePurchase } from '../components/billing/RestorePurchase.jsx';
@@ -19,6 +19,7 @@ const STATUS_KEY = {
   canceling: 'billing.statusCanceling',
   canceled: 'billing.statusCanceled',
   expired: 'billing.statusExpired',
+  paused: 'billing.statusPaused',
   refunded: 'billing.statusRefunded',
   revoked: 'billing.statusRevoked',
   past_due: 'billing.statusPastDue',
@@ -177,7 +178,7 @@ export default function Settings() {
               )}
             </div>
             {isPro ? (
-              <Button href={GUMROAD_MANAGE_URL} target="_blank" rel="noreferrer" variant="secondary" size="sm">{t('billing.managePlan')}</Button>
+              <ManageSubscriptionButton size="sm" />
             ) : (
               <Button to="/pricing" size="sm" icon="upgrade">{t('billing.viewPro')}</Button>
             )}
