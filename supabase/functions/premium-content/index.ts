@@ -45,7 +45,7 @@ Deno.serve(async (request) => {
   const admin = adminClient();
   const { data: subscriptions, error: subscriptionError } = await admin
     .from('subscriptions')
-    .select('plan, status, current_period_end, ended_at, last_verified_at')
+    .select('plan, status, current_period_end, ended_at, last_verified_at, provider, provider_environment')
     .eq('user_id', user.id);
 
   // An ambiguous failure must not open the gate.

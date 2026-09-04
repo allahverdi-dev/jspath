@@ -34,6 +34,7 @@ const PADDLE_SHARED = read('supabase/functions/_shared/paddle.js');
 const CHECKOUT = read('supabase/functions/paddle-checkout/index.ts');
 const RECONCILE = read('supabase/functions/reconcile-paddle/index.ts');
 const PORTAL = read('supabase/functions/paddle-portal/index.ts');
+const PREMIUM_CONTENT = read('supabase/functions/premium-content/index.ts');
 const MIGRATION = read('supabase/migrations/202609040001_paddle_billing.sql');
 
 const SECRET = 'pdl_ntfset_test_secret';
@@ -343,6 +344,17 @@ describe('environment provenance', () => {
       expect(subscriptionGrantsPro(gumroad, NOW, environment)).toBe(true);
       expect(serverGrantsPro(gumroad, NOW, environment)).toBe(true);
     }
+  });
+
+  it('keeps Paddle environment provenance available to the premium content gate', () => {
+    const code = stripComments(PREMIUM_CONTENT);
+
+    expect(code).toContain(
+      ".select('plan, status, current_period_end, ended_at, last_verified_at, provider, provider_environment')",
+    );
+    expect(code).toContain(
+      'resolveEntitlement({ authenticated: true, subscriptions: subscriptions ?? [] })',
+    );
   });
 
   it('is required by the schema for Paddle rows', () => {
