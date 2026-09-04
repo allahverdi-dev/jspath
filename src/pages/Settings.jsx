@@ -10,6 +10,7 @@ import { useEntitlements } from '../state/EntitlementProvider.jsx';
 import { GUMROAD_MANAGE_URL } from '../features/billing/plans.js';
 import { useI18n } from '../i18n/index.jsx';
 import { DeleteAccountSection } from '../components/settings/DeleteAccountSection.jsx';
+import { RestorePurchase } from '../components/billing/RestorePurchase.jsx';
 
 /* Stable subscription tokens mapped to their wording. The tokens themselves are
    what entitlement compares, and are never translated. */
@@ -181,6 +182,8 @@ export default function Settings() {
               <Button to="/pricing" size="sm" icon="upgrade">{t('billing.viewPro')}</Button>
             )}
           </div>
+          {/* A purchase made before this account existed can be claimed here. */}
+          <RestorePurchase className="mt-4" />
           {/* Cancelling is done here; what it does and does not mean is there. */}
           <p className="mt-3 font-body-sm text-on-surface-variant">
             <Link to="/refund-policy" className="text-primary-ink underline underline-offset-2">

@@ -300,6 +300,12 @@ export default {
     benefitPlayground: 'JavaScript playground and basic progress tracking',
     benefitSync: 'Cloud progress sync with a free account',
     benefitBookmarks: 'Bookmarks and achievements',
+    restorePurchase: 'Restore Pro purchase',
+    restoreChecking: 'Checking...',
+    restoreHint: 'Already bought Pro with this account\u2019s email? Check for it here.',
+    restoreRestored: 'Your Pro purchase was found and restored to this account.',
+    restoreNotFound: 'No eligible purchase was found for this account. If you paid with a different email address, sign in with that address instead.',
+    restoreFailed: 'The purchase could not be checked right now. Nothing has been changed - please try again in a moment.',
   },
 
   landing: {
@@ -943,12 +949,12 @@ export default {
     deleteEffectProgress: 'delete the progress synced to your account, including completed lessons, XP, streaks, bookmarks, achievements, placement result and settings',
     deleteEffectLocal: 'clear JSPath data stored in this browser',
     deleteEffectProviders: 'leave your Google and GitHub accounts untouched - deleting here does not delete those, and each provider keeps its own records under its own policy',
-    deleteEffectGumroad: 'leave Gumroad purchase and payment records in place - Gumroad controls those separately, and deleting your account is not a refund',
+    deleteEffectGumroad: 'leave Gumroad purchase and payment records in place - Gumroad controls those separately. Deleting your account is not a refund, and it does not cancel a Gumroad subscription for you',
     deleteBlockedTitle: 'Cancel your subscription first',
     deleteBlockedBody: 'Your Pro subscription can still renew, and JSPath cannot cancel it for you. Cancel it in Gumroad first, then come back - otherwise you could keep being charged for an account that no longer exists.',
     deleteUnknownStateBody: 'Your subscription is in a state JSPath cannot safely interpret right now. Please try again shortly, or get in touch before deleting.',
     deleteForfeitTitle: 'You still have paid time left',
-    deleteForfeitBody: 'Your subscription is already canceled and will not renew, but Pro is still available to you until the end of the period you paid for. Deleting now gives up that remaining access, and it is not refunded.',
+    deleteForfeitBody: 'Your subscription is already canceled and will not renew, but Pro is still available to you until the end of the period you paid for. Deleting now gives up that remaining access for this account, and it is not refunded. If you later create a new account with the same purchase email, any time still left on that purchase may be claimable with Restore Pro purchase - your learning progress cannot be brought back.',
     deleteTypeToConfirm: 'Type {word} to confirm',
     deleteConfirmWord: 'DELETE',
     deletePermanently: 'Delete permanently',
@@ -1075,6 +1081,9 @@ export default {
     decisionGoverningLaw: 'governing law',
     decisionDeletion: 'deleting your account',
     decisionMinimumAge: 'minimum age',
+    copyEmail: 'Copy email',
+    emailCopied: 'Email copied',
+    emailCopyFailed: 'Could not copy the email. Select and copy it manually.',
   },
 
   footer: {

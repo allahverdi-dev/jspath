@@ -229,3 +229,70 @@ VITE_GUMROAD_PRO_ANNUAL_URL
 
 Never add `GUMROAD_ACCESS_TOKEN`, `GUMROAD_ALLOWED_PRODUCTS_JSON`, `GUMROAD_WEBHOOK_TOKEN`, or
 `SUPABASE_SERVICE_ROLE_KEY` to Vercel's frontend environment or source control.
+
+
+## Restoring a purchase
+
+`reconcile-gumroad` runs from three places. Two are automatic and narrow; the
+third is the learner asking.
+
+| Trigger | When |
+| --- | --- |
+| Return from checkout | `/pricing?purchase=success`, once per visit |
+| Stale row refresh | `EntitlementProvider`, when an existing row satisfies `subscriptionNeedsReconciliation` — once per user per session |
+| **Restore Pro purchase** | The learner clicks it, in Settings or on Pricing |
+
+### The gap the button closes
+
+The automatic refresh asks
+`result.data?.some((item) => subscriptionNeedsReconciliation(item))`. For an
+account with **no** subscription rows that is `[].some(...)` — false — so nothing
+ever asked Gumroad whether a purchase existed.
+
+That is the exact state of an account recreated after deletion: the cascade took
+`subscriptions` with it, the Gumroad subscription is untouched and still valid,
+and the new Supabase user starts with an empty list. In production the only
+thing that recovered it was opening `/pricing?purchase=success` by hand, which
+is an internal checkout return path, not something a learner can be told to do.
+
+### Why the button rather than an automatic call
+
+Reconciling automatically whenever an authenticated user with no rows opens
+Pricing was considered and rejected. Pricing is visited constantly by free
+learners who have never bought anything, so it would spend one Gumroad API call
+per user per session almost always to learn nothing, and it would make
+entitlement depend on which page someone happened to open. An explicit action
+costs one call exactly when there is reason to think a purchase exists, and it
+is deterministic to test.
+
+`RestorePurchase` renders only for a signed-in learner who is **not** already
+Pro and only when billing is configured, so the button is absent wherever it
+could not help.
+
+### Security
+
+The button changes no trust boundary. The browser sends **no body at all** —
+no email, no user id, no subscription data — so there is nothing in the request
+to forge. The function still:
+
+- requires an `Authorization` header and verifies it with `auth.getUser()`
+- requires `email_confirmed_at`
+- searches Gumroad with `salesForEmail(user.email)` — the *authenticated*
+  address, never a supplied one
+- filters by `GUMROAD_ALLOWED_PRODUCTS_JSON`
+- re-checks in `resolveUser` that the purchaser email matches the account
+- maps `refunded` / `disputed` / `chargebacked` to non-entitling statuses
+- writes the row itself, with `current_period_end` taken from the provider
+
+Repeating a restore is safe: the unique constraints
+`subscriptions_provider_subscription_unique` and
+`subscriptions_provider_sale_unique` mean a second run updates the same row
+rather than adding one.
+
+### What restore does not do
+
+It restores **entitlement only**. Learning progress lives in `user_progress`,
+which is a different table with a different lifecycle — deleted with the
+account, cascaded, gone. A recreated account is a new learning profile that may
+carry an old purchase. The Privacy Policy and the delete-account dialog both
+say so.

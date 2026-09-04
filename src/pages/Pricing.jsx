@@ -9,6 +9,7 @@ import {
 import { subscriptionGrantsPro } from '../features/billing/entitlements.js';
 import { CONTENT_ALLOCATION as allocation } from '../features/billing/contentAllocation.js';
 import { useI18n } from '../i18n/index.jsx';
+import { RestorePurchase } from '../components/billing/RestorePurchase.jsx';
 
 const proBenefits = (t) => [
   t('billing.benefitEverythingInFree'),
@@ -185,6 +186,8 @@ export default function Pricing() {
               ))}
             </div>
           )}
+          {/* Renders itself only for a signed-in learner without Pro. */}
+          <RestorePurchase className="mt-5" />
           <p className="mt-3 text-center font-body-sm text-on-surface-variant">
             {t('billing.gumroadNotice')}{' '}
             <Link to="/refund-policy" className="text-primary-ink underline underline-offset-2">

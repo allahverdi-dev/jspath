@@ -131,6 +131,27 @@ nothing more: JSPath has no acceptance flow — no checkbox, no recorded consent
 so no screen claims the learner is agreeing to anything by continuing. Adding
 that sentence would assert a consent mechanism the product does not implement.
 
+## The contact address
+
+`ContactEmail` renders the address in the Contact section of each policy. It is
+three things at once, deliberately:
+
+1. **plain selectable text** — the fallback that always works
+2. **a `mailto:` link** — the fast path where a mail handler exists
+3. **a Copy button** — for the machines where it does not
+
+The third exists because of a real production finding: the `mailto:` markup is
+correct, but on a browser with no mail protocol handler registered, clicking it
+does nothing at all, which is indistinguishable from a broken link.
+
+The clipboard is touched only inside the click handler — never on mount, and no
+permission is requested up front. `navigator.clipboard` is absent in insecure
+contexts and can reject, so a failure says "select and copy it manually" rather
+than failing silently. No CSP change was needed for any of this.
+
+Only the Contact sections carry the button. Elsewhere the address stays a plain
+link, so the prose is not littered with controls.
+
 ## No cookie banner
 
 JSPath sets no cookies, runs no analytics and has no tracking. A banner would be

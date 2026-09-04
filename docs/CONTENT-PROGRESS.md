@@ -20,6 +20,7 @@ Status of each content pillar. Counts come from
 | Production defect remediation | **COMPLETE** | text fragmentation and auth-aware landing |
 | Legal / trust layer | **COMPLETE** | all five owner decisions published |
 | Account deletion | **COMPLETE** | Settings danger zone, server-side, subscription-safe |
+| Purchase restore | **COMPLETE** | recreated accounts can claim a valid Gumroad purchase |
 | Product (billing, auth, entitlements) | **INCOMPLETE** | in progress |
 
 ## Cheat sheets
@@ -661,7 +662,7 @@ All gates green as of the last run:
 | `npm run content:audit` | 1856 relations, 0 broken references, 0 warnings |
 | `npm run content:verify` | 569 items, 4561 assertions, 0 failures |
 | `npm run content:examples` | 949 lesson + 40 interview + 202 reference examples, 0 mismatches |
-| `npm test` | 780 passed (30 files) |
+| `npm test` | 838 passed (32 files) |
 | `npm run lint` | clean |
 | `npm run build` | success |
 | `git diff --check` | clean |
@@ -888,6 +889,69 @@ empty-looking app.
 | Language | `<html lang>` follows the locale; no localized policy prose is marked `lang="en"`; dates format through the locale formatter, including the custom Azerbaijani one |
 | Footer | mounted once by `AppShell` and once by `Landing`, absent from `FocusLayout`, client-side routing throughout |
 | Reach | policy links present on landing, dashboard, pricing, settings, login and signup |
+
+## Recovery, contact and typography
+
+Three findings from production, two real and one that turned out to be my own
+reporting error.
+
+### 1. A recreated account could not claim its purchase
+
+A Canceling Pro learner deleted their account, the cascade removed
+`subscriptions`, and they signed up again with the same identity. The Gumroad
+subscription was untouched and still valid, but nothing asked about it.
+
+The automatic reconciliation trigger is
+`subscriptions.some(needsReconciliation)`, and an account with no rows makes that
+`[].some(...)` - false. There was no path from "valid purchase exists" to "this
+account knows about it" except opening the internal `/pricing?purchase=success`
+return URL by hand.
+
+Closed with an explicit **Restore Pro purchase** action in Settings and on
+Pricing, rendered only for a signed-in learner who is not already Pro. Automatic
+reconciliation on Pricing visits was considered and rejected: it would call
+Gumroad once per session for every free learner who never bought anything. See
+`docs/BILLING_GUMROAD.md` for the trigger table and the security model, which is
+unchanged - the browser sends no body at all.
+
+Restore brings back **entitlement only**. `user_progress` was deleted with the
+account and stays deleted; the recreated account is a new learning profile. The
+delete dialog and the Privacy Policy both say so now, and also that deletion is
+not a refund and does not cancel a Gumroad subscription.
+
+### 2. The contact address needed a fallback
+
+`mailto:jspath.edu@gmail.com` is correct markup, but on a browser with no mail
+handler a click does nothing - indistinguishable from a broken link. The address
+is now plain selectable text, a mailto link, and a Copy button, in the Contact
+section of each policy. Clipboard access happens only inside the click handler
+and degrades to "select and copy it manually". No CSP change was required.
+
+### 3. The typography finding was wrong
+
+An earlier report of mine claimed `text-display-md`, `text-title-lg`,
+`text-title-sm` and `text-label-sm` were used across the app but undefined.
+`git log -S` finds them in no commit: they were class names I invented while
+drafting `LegalDocument.jsx`, checked against the built CSS, and then
+misattributed to existing code. The correction matters because it was acted on.
+
+A full audit did find **one** genuine case: `text-label-md` on a cheat-sheet
+table header, which Tailwind never generated, so the header silently inherited
+16px - the same size as its own cells. Replaced with `text-body-sm`, an existing
+token, giving a 14px header over 16px content.
+
+| Category | Result |
+| --- | --- |
+| Used and defined | 16 utilities, all generated |
+| Used but undefined | 1 - `text-label-md`, now fixed |
+| Defined but unused | `text-body-lg` (harmless; `body-lg` is used as a family utility) |
+
+A test now fails if any `text-<scale>-<size>` used in the app is missing from the
+Tailwind config, so a class that compiles to nothing cannot ship again.
+
+Three arbitrary sizes remain in `AppShell` (`text-[13px]`, `text-[15px]`,
+`text-[10px]`). They are deliberate one-offs in the logo and the mobile tab bar,
+predate this work, and were left alone.
 
 ## Next phase
 

@@ -379,6 +379,7 @@ export default {
               'JSPath ödəniş bildirişinin iki dəfə emal olunmaması üçün kiçik bir hadisə jurnalı saxlayır. Orada hadisənin növü, provayder istinadı və mesajın kriptoqrafik barmaq izi var; nə hesabınıza, nə də sizə istinad daşımır.',
             ],
           },
+          { p: 'Hesabın silinməsi Gumroad abunəliyini sizin əvəzinizə ləğv etmir və geri qaytarma demək deyil. Sonradan alışın həyata keçirildiyi eyni e-poçt ünvanı ilə yeni JSPath hesabı yaratsanız, hələ də etibarlı olan Pro alışını Tənzimləmələrdəki «Pro alışını bərpa et» ilə yeni hesaba tələb edə bilərsiniz. Bu, yalnız girişi bərpa edir: silinmiş tədris irəliləyişi itib və geri qaytarıla bilməz, yeni hesab isə yeni tədris profili kimi başlayır.' },
           { p: 'Silinmə ilə bağlı suallarınızı {email} ünvanına göndərə bilərsiniz.' },
         ],
       },

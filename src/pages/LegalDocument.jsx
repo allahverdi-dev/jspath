@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/index.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { DOCUMENTS, resolveDocument } from '../legal/documents.js';
 import { LAST_UPDATED, LEGAL_FACTS, LEGAL_PUBLISHABLE, pendingDecisionKeys } from '../legal/config.js';
+import { ContactEmail } from '../components/layout/ContactEmail.jsx';
 
 /**
  * One renderer for all three policies.
@@ -83,10 +84,12 @@ export default function LegalDocument({ documentId }) {
                 {section.blocks.map((block, index) =>
                   block.ul ? (
                     <ul key={index}>
-                      {block.ul.map((item, itemIndex) => <li key={itemIndex}><Prose text={item} /></li>)}
+                      {block.ul.map((item, itemIndex) => (
+                        <li key={itemIndex}><Prose text={item} withCopy={section.id === 'contact'} /></li>
+                      ))}
                     </ul>
                   ) : (
-                    <p key={index}><Prose text={block.p} /></p>
+                    <p key={index}><Prose text={block.p} withCopy={section.id === 'contact'} /></p>
                   ),
                 )}
               </div>
@@ -120,7 +123,7 @@ export default function LegalDocument({ documentId }) {
  * translation can inject a link, and there is no markup for a translator to get
  * wrong.
  */
-function Prose({ text }) {
+function Prose({ text, withCopy = false }) {
   const email = LEGAL_FACTS.email;
   if (!text?.includes(email)) return text ?? null;
 
@@ -128,13 +131,17 @@ function Prose({ text }) {
     index === 0
       ? [part]
       : [
-        <a
-          key={`mail-${index}`}
-          href={`mailto:${email}`}
-          className="text-primary-ink underline underline-offset-2 hover:opacity-80"
-        >
-          {email}
-        </a>,
+        withCopy
+          ? <ContactEmail key={`mail-${index}`} />
+          : (
+            <a
+              key={`mail-${index}`}
+              href={`mailto:${email}`}
+              className="text-primary-ink underline underline-offset-2 hover:opacity-80"
+            >
+              {email}
+            </a>
+          ),
         part,
       ]
   ));

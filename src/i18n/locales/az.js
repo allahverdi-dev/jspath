@@ -301,6 +301,12 @@ export default {
     benefitPlayground: 'JavaScript playground və əsas irəliləyiş izləməsi',
     benefitSync: 'Pulsuz hesabla buludda irəliləyiş sinxronizasiyası',
     benefitBookmarks: 'Əlfəcinlər və nailiyyətlər',
+    restorePurchase: 'Pro alışını bərpa et',
+    restoreChecking: 'Yoxlanılır...',
+    restoreHint: 'Pro-nu bu hesabın e-poçt ünvanı ilə almısınız? Buradan yoxlayın.',
+    restoreRestored: 'Pro alışınız tapıldı və bu hesaba bərpa edildi.',
+    restoreNotFound: 'Bu hesab üçün uyğun alış tapılmadı. Başqa e-poçt ünvanı ilə ödəmisinizsə, həmin ünvanla daxil olun.',
+    restoreFailed: 'Alışı hazırda yoxlamaq mümkün olmadı. Heç nə dəyişdirilmədi - bir azdan yenidən cəhd edin.',
   },
 
   landing: {
@@ -945,12 +951,12 @@ export default {
     deleteEffectProgress: 'hesabınıza sinxronlaşdırılmış irəliləyişi silir: tamamlanmış dərslər, XP, ardıcıllıq günləri, əlfəcinlər, nailiyyətlər, səviyyə qiymətləndirməsinin nəticəsi və tənzimləmələr',
     deleteEffectLocal: 'bu brauzerdə saxlanılan JSPath məlumatlarını təmizləyir',
     deleteEffectProviders: 'Google və GitHub hesablarınıza toxunmur - buradan silmək onları silmir və hər provayder öz qaydaları çərçivəsində öz qeydlərini saxlayır',
-    deleteEffectGumroad: 'Gumroad-dakı alış və ödəniş qeydlərini yerində saxlayır - onları Gumroad ayrıca idarə edir və hesabın silinməsi geri qaytarma demək deyil',
+    deleteEffectGumroad: 'Gumroad-dakı alış və ödəniş qeydlərini yerində saxlayır - onları Gumroad ayrıca idarə edir. Hesabın silinməsi nə geri qaytarma deməkdir, nə də Gumroad abunəliyini sizin əvəzinizə ləğv edir',
     deleteBlockedTitle: 'Əvvəlcə abunəliyi ləğv edin',
     deleteBlockedBody: 'Pro abunəliyiniz hələ də yenilənə bilər və JSPath onu sizin əvəzinizə ləğv edə bilmir. Əvvəlcə Gumroad-da ləğv edin, sonra qayıdın - əks halda artıq mövcud olmayan hesab üçün ödəniş tutulmağa davam edə bilər.',
     deleteUnknownStateBody: 'Abunəliyinizin vəziyyətini JSPath hazırda təhlükəsiz şəkildə müəyyən edə bilmir. Bir az sonra yenidən cəhd edin və ya silməzdən əvvəl bizimlə əlaqə saxlayın.',
     deleteForfeitTitle: 'Ödənilmiş vaxtınız hələ qalır',
-    deleteForfeitBody: 'Abunəliyiniz artıq ləğv edilib və yenilənməyəcək, lakin Pro ödədiyiniz dövrün sonuna qədər sizə açıqdır. İndi silsəniz, qalan bu girişdən imtina etmiş olursunuz və həmin məbləğ geri qaytarılmır.',
+    deleteForfeitBody: 'Abunəliyiniz artıq ləğv edilib və yenilənməyəcək, lakin Pro ödədiyiniz dövrün sonuna qədər sizə açıqdır. İndi silsəniz, bu hesab üçün qalan girişdən imtina etmiş olursunuz və həmin məbləğ geri qaytarılmır. Sonradan eyni alış e-poçtu ilə yeni hesab yaratsanız, həmin alışda qalan müddəti «Pro alışını bərpa et» ilə tələb edə bilərsiniz - tədris irəliləyişinizi isə geri qaytarmaq mümkün deyil.',
     deleteTypeToConfirm: 'Təsdiqləmək üçün {word} yazın',
     deleteConfirmWord: 'SİL',
     deletePermanently: 'Həmişəlik sil',
@@ -1077,6 +1083,9 @@ export default {
     decisionGoverningLaw: 'tətbiq olunan qanunvericilik',
     decisionDeletion: 'hesabın silinməsi',
     decisionMinimumAge: 'minimum yaş həddi',
+    copyEmail: 'E-poçtu kopyala',
+    emailCopied: 'E-poçt kopyalandı',
+    emailCopyFailed: 'E-poçtu kopyalamaq mümkün olmadı. Onu seçib əl ilə kopyalayın.',
   },
 
   footer: {

@@ -384,6 +384,7 @@ export default {
               'JSPath keeps a small billing-event log so that a payment notification is not processed twice. It holds an event type, a provider reference and a cryptographic fingerprint of the message, and carries no reference to your account or to you.',
             ],
           },
+          { p: 'Deleting an account does not cancel a Gumroad subscription for you, and it is not a refund. If you later create a new JSPath account using the same email address the purchase was made with, a Pro purchase that is still valid can be claimed on the new account with "Restore Pro purchase" in Settings. That restores the entitlement only: the deleted learning progress is gone and cannot be brought back, and the new account starts as a new learning profile.' },
           { p: 'Questions about deletion can be sent to {email}.' },
         ],
       },

@@ -26,7 +26,7 @@ function SheetTable({ columns, rows }) {
               <th
                 key={i}
                 scope="col"
-                className="whitespace-nowrap border-b border-outline-variant pb-2 pr-3 font-heading text-label-md text-on-surface-variant"
+                className="whitespace-nowrap border-b border-outline-variant pb-2 pr-3 font-heading text-body-sm text-on-surface-variant"
               >
                 <InlineMarkup text={col} />
               </th>
